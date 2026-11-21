@@ -1,6 +1,6 @@
 # Casos de teste — petclinic-sql-api
 
-Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um por teste a automatizar, identificados pelo ID CT que vai no comentário acima do teste no código. Os arquivos de cada seção são os previstos em `tests/api/`; nenhum existe ainda. A exceção é a seção Postman, que já roda na coleção. Total: 91 casos.
+Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um por teste a automatizar, identificados pelo ID CT que vai no comentário acima do teste no código. Os arquivos de cada seção são os previstos em `tests/api/`; nenhum existe ainda. A exceção é a seção Postman, que já roda na coleção. Total: 92 casos.
 
 **Notas gerais**
 
@@ -38,7 +38,8 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | Bugs conhecidos | [tests/api/known_bugs/test_pet_owner_path.py](#testsapiknown_bugstest_pet_owner_pathpy) | 1 |
 | Bugs conhecidos | [tests/api/known_bugs/test_visit_description.py](#testsapiknown_bugstest_visit_descriptionpy) | 1 |
 | Bugs conhecidos | [tests/api/known_bugs/test_visit_date.py](#testsapiknown_bugstest_visit_datepy) | 2 |
-| **Total** | | **91** |
+| Bugs conhecidos | [tests/api/known_bugs/test_pet_type_name.py](#testsapiknown_bugstest_pet_type_namepy) | 1 |
+| **Total** | | **92** |
 
 ## API
 
@@ -708,7 +709,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Enviar POST /api/pettypes com o nome repetido.<br>2. Verificar a resposta.<br>3. Contar no banco os tipos com esse nome. |
 | **Resultado esperado** | Status 4xx (409) e um tipo com esse nome. |
 | **Status** | Não executado |
-| **Observações** | Dicionário: o banco aceita dois `cat`; o índice `types_name_idx` não é UNIQUE.<br>Regra a confirmar. |
+| **Observações** | Dicionário: o banco aceita dois `cat`; o índice `types_name_idx` não é UNIQUE.<br>Regra adotada em 2026-11-21: não pode haver dois tipos com o mesmo nome, porque um tipo é um item de catálogo (ao contrário da visita do CT-API-VISITS-09, que é um evento e pode se repetir). Hoje o nome repetido é aceito com 201: é o BUG-14 (CT-BUG-14-01). Nenhum valor passa, então o caso não entra na coleção do Postman, que continua sem falhas conhecidas. |
 
 #### CT-API-PET-TYPES-05 — Tipo com o mesmo nome em maiúsculas diferentes
 
@@ -1469,3 +1470,22 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Resultado obtido** | Passo 3: 201 nos POST e 204 no PUT. Passo 4: três visitas e um pet a mais, com datas como 57003-01-14 e 4917239-04-06, e a visita existente com 2008-05-01 (BUGS.md). |
 | **Status** | Não executado |
 | **Observações** | Reproduzido do zero em 2026-11-21. Um caso parametrizado por pedido (`pytest.mark.parametrize`). O contrato define os campos como `type: string, format: date`. Teardown: visitas, pets, tipo e dono; cada remoção aceita "já removido". |
+
+### tests/api/known_bugs/test_pet_type_name.py
+
+#### CT-BUG-14-01 — [BUG-14] Tipo com nome repetido é recusado
+
+| Campo | Descrição |
+|---|---|
+| **Módulo / Área** | Bugs conhecidos › API › Tipos de pet › Criação |
+| **Tipo de teste** | Funcional – regra de negócio |
+| **Prioridade** | Média |
+| **Bug relacionado** | BUG-14 |
+| **Objetivo** | Garantir que a API não grava dois tipos com o mesmo nome. |
+| **Pré-condições** | Tipo com nome único criado via API. |
+| **Dados de teste** | O mesmo nome do tipo criado; `cat`, que existe no seed (tipo 1). |
+| **Passos** | 1. Contar no banco os tipos com cada nome.<br>2. Para cada nome, enviar POST /api/pettypes.<br>3. Verificar cada resposta.<br>4. Contar de novo. |
+| **Resultado esperado** | Passo 3: status 400 (ou 409) apontando o campo `name`.<br>Passo 4: um tipo com cada nome. |
+| **Resultado obtido** | Passo 3: status 201 nos dois. Passo 4: dois tipos com cada nome (BUGS.md). |
+| **Status** | Não executado |
+| **Observações** | Reproduzido do zero em 2026-11-21. Um caso parametrizado por nome (`pytest.mark.parametrize`). Depende do tipo `cat` do `populateDB.sql`, para provar que o seed também é protegido. Teardown: tipos criados; cada remoção aceita "já removido". |

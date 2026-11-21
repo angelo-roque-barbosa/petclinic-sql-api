@@ -6,7 +6,7 @@ detalhes de cada um: passos, esperado, obtido, evidência no banco e, quando con
 Ambiente: `springcommunity/spring-petclinic-rest:latest` (4.0.2) com `postgres:16.3`, via `docker compose`. Todos
 reproduzidos do zero (`docker compose down -v` e `up -d --wait`). BUG-01, BUG-02 e BUG-03 foram reproduzidos de novo
 em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`); o BUG-04 foi reproduzido nela em
-2026-11-17, o BUG-05, o BUG-06, o BUG-07, o BUG-08 e o BUG-09, em 2026-11-18, o BUG-10, em 2026-11-19, o BUG-11 e o BUG-12, em 2026-11-20, e o BUG-13, em 2026-11-21.
+2026-11-17, o BUG-05, o BUG-06, o BUG-07, o BUG-08 e o BUG-09, em 2026-11-18, o BUG-10, em 2026-11-19, o BUG-11 e o BUG-12, em 2026-11-20, e o BUG-13 e o BUG-14, em 2026-11-21.
 
 | Bug | Resumo | Impacto | Issue |
 |:---|:---|:---|:---|
@@ -23,6 +23,7 @@ em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`)
 | [BUG-11](#bug-11--descrição-de-visita-só-com-espaços-é-aceita-e-gravada) | Descrição de visita só com espaços é aceita e gravada | baixo a médio | [#11](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/11) |
 | [BUG-12](#bug-12--visita-com-data-anterior-ao-nascimento-do-pet-é-aceita) | Visita com data anterior ao nascimento do pet é aceita | baixo a médio | [#12](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/12) |
 | [BUG-13](#bug-13--data-enviada-como-número-é-aceita-e-gravada-como-outra-data) | Data enviada como número é aceita e gravada como outra data | baixo a médio | [#13](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/13) |
+| [BUG-14](#bug-14--tipo-de-pet-com-nome-repetido-é-aceito) | Tipo de pet com nome repetido é aceito | baixo a médio | [#14](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/14) |
 
 ## BUG-01 · API responde 500 em vez de 400 quando o id do dono não é numérico
 
@@ -416,6 +417,34 @@ em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`)
   integra com a API. O erro mais provável é mandar um timestamp, que vira uma visita no ano 4,9 milhões, com `201`,
   sem nenhum aviso. Os dados ficam corrompidos em silêncio, o que é pior do que o `500` do BUG-08, que não grava
   nada. O banco não impede: o PostgreSQL aceita datas até o ano 5874897.
+
+## BUG-14 · Tipo de pet com nome repetido é aceito
+
+- **Issue:** [#14](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/14)
+- **Passos:** `docker compose down -v` → `up -d --wait` → contar as linhas de `types` → `POST /api/pettypes` com
+  `"name": "cat"`, nome que já existe no seed (tipo 1) → `POST /api/pettypes` com `"name": "Furão"` duas vezes →
+  `GET /api/pettypes` → conferir no banco os nomes repetidos.
+- **Esperado:** o primeiro `Furão` com `201`; o `cat` e o segundo `Furão` com `400` (o contrato lista o `400` para o
+  `POST`; `409 Conflict` também serviria, mas não está no contrato), sem gravar nada. Regra adotada em 2026-11-21: não
+  pode haver dois tipos com o mesmo nome.
+- **Obtido:** `201` nos três pedidos. `types` passa de 6 para 9 linhas, e a lista da API mostra os repetidos:
+
+  | Nome | Quantos tipos | Ids |
+  |:---|:---:|:---|
+  | `cat` | 2 | 1 (seed) e 7 |
+  | `Furão` | 2 | 8 e 9 |
+
+  `GET /api/pettypes` → `cat, dog, lizard, snake, bird, hamster, cat, Furão, Furão`.
+- **Evidência no banco:** a contagem de `types` (6 antes, 9 depois e 6 depois da limpeza) e o agrupamento por nome,
+  com dois `cat` e dois `Furão`. O índice `types_name_idx` existe, mas não é `UNIQUE`. Reproduzido do zero em
+  2026-11-21, na imagem `4.0.2` (digest `sha256:daba846d…`).
+- **Causa provável:** a API não confere se o nome já existe antes de gravar, e o banco não tem restrição de
+  unicidade no nome.
+- **Impacto:** baixo a médio. Um tipo é um item de catálogo: dois `cat` não representam nada de real. O seletor de
+  tipo mostra o nome repetido, os pets do mesmo tipo ficam divididos entre dois ids e relatórios por tipo saem
+  errados. Com o BUG-07, apagar um dos `cat` repetidos ainda apaga os pets dele.
+- **Fora deste bug, por enquanto:** o mesmo nome com outra caixa (`Cat`) ou com espaço no fim (`cat `) também é
+  aceito; fica para o `CT-API-PET-TYPES-05` decidir se amplia este bug.
 
 ## Observações
 
