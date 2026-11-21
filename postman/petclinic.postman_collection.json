@@ -1830,6 +1830,104 @@
           "response": []
         },
         {
+          "name": "CT-API-PET-TYPES-03a",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Nome com exatamente 80 caracteres, o limite do contrato\npm.collectionVariables.set(\"petTypeLimitName\", \"a\".repeat(80));\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const sent = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));\nconst body = pm.response.json();\n\npm.test(\"nome enviado tem 80 caracteres\", () => {\n  pm.expect(sent.name).to.have.lengthOf(80);\n});\n\npm.test(\"status 201\", () => pm.response.to.have.status(201));\n\npm.test(\"nome na resposta igual ao enviado\", () => {\n  pm.expect(body.name).to.eql(sent.name);\n});\n\npm.test(\"responde em menos de 500 ms\", () => {\n  pm.expect(pm.response.responseTime).to.be.below(500);\n});\n\n// Confere o que ficou gravado, buscando o tipo de novo\npm.sendRequest(pm.environment.get(\"baseUrl\") + \"/pettypes/\" + body.id, (err, res) => {\n  pm.test(\"nome gravado inteiro, igual ao enviado\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(200);\n    pm.expect(res.json().name).to.eql(sent.name);\n  });\n});\n\n// Tipo criado por este request, para apagar no fim do fluxo\npm.collectionVariables.set(\"limitPetTypeId\", body.id);\n"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"{{petTypeLimitName}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pettypes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pettypes"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "CT-API-PET-TYPES-03b",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Nome com 81 caracteres, um acima do limite do contrato\npm.collectionVariables.set(\"petTypeLimitName\", \"a\".repeat(81));\n\n// Quantos tipos existem antes do POST\npm.sendRequest(pm.environment.get(\"baseUrl\") + \"/pettypes\", (err, res) => {\n  if (err) throw err;\n  pm.collectionVariables.set(\"petTypesCountBefore\", res.json().length);\n});\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const sent = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));\nconst countBefore = Number(pm.collectionVariables.get(\"petTypesCountBefore\"));\n\npm.test(\"nome enviado tem 81 caracteres\", () => {\n  pm.expect(sent.name).to.have.lengthOf(81);\n});\n\npm.test(\"status 400\", () => pm.response.to.have.status(400));\n\n// O 400 tem de ser pelo nome, com o valor enviado\npm.test(\"erro aponta o campo name com o valor enviado\", () => {\n  const errors = pm.response.json().schemaValidationErrors;\n  pm.expect(errors, \"lista de erros de validação\").to.be.an(\"array\").and.not.empty;\n  errors.forEach((e) => {\n    pm.expect(e.field).to.eql(\"name\");\n    pm.expect(e.rejectedValue).to.eql(sent.name);\n  });\n});\n\npm.test(\"responde em menos de 500 ms\", () => {\n  pm.expect(pm.response.responseTime).to.be.below(500);\n});\n\n// Nenhum tipo pode ter sido criado\npm.sendRequest(pm.environment.get(\"baseUrl\") + \"/pettypes\", (err, res) => {\n  pm.test(\"quantidade de tipos não mudou\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.json().length).to.eql(countBefore);\n  });\n});\n"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"{{petTypeLimitName}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pettypes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pettypes"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "CT-API-PETS-01",
           "event": [
             {
@@ -3759,6 +3857,35 @@
           ]
         },
         {
+          "name": "Limpeza: CT-API-PET-TYPES-03a",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pettypes/{{limitPetTypeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pettypes",
+                "{{limitPetTypeId}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// URL já com o id real (ex.: http://localhost:9966/petclinic/api/pettypes/18)\nconst url = pm.variables.replaceIn(pm.request.url.toString());\n\n// \"Já removido\" também é sucesso para uma limpeza\npm.test(\"tipo apagado ou já removido (204 ou 404)\", () => {\n  pm.expect(pm.response.code).to.be.oneOf([204, 404]);\n});\n\n// Confere que o tipo não existe mais\npm.sendRequest(url, (err, res) => {\n  pm.test(\"tipo não existe mais (GET devolve 404)\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(404);\n  });\n});\n"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Limpeza: CT-API-OWNERS-03b",
           "event": [
             {
@@ -4358,6 +4485,14 @@
     },
     {
       "key": "petTypesCountBefore",
+      "value": ""
+    },
+    {
+      "key": "petTypeLimitName",
+      "value": ""
+    },
+    {
+      "key": "limitPetTypeId",
       "value": ""
     }
   ]
