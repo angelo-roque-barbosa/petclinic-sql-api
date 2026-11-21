@@ -679,7 +679,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Contar as linhas de `types`.<br>2. Para cada corpo, enviar POST /api/pettypes.<br>3. Verificar cada resposta e contar de novo. |
 | **Resultado esperado** | Status 400 em todos e mesma contagem. |
 | **Status** | Não executado |
-| **Observações** | Dicionário: o banco aceita NULL e `''`. |
+| **Observações** | Dicionário: o banco aceita NULL e `''`.<br>Em 2026-11-21, os quatro corpos responderam 400 apontando só o campo `name`, e nenhum tipo foi gravado: quem recusa é a validação da API (`@NotNull`, tamanho de 1 a 80 e o `pattern` do contrato, que exige uma letra no início). Na coleção do Postman: `CT-API-PET-TYPES-02a` a `02d`, um por corpo, na pasta Pets, logo depois do `CT-API-PET-TYPES-01`.<br>Espaço no fim é aceito: `'gato '` foi gravado com o espaço, porque o `pattern` permite espaço depois da primeira letra. Fica para o CT-API-PET-TYPES-04 (nome repetido). |
 
 #### CT-API-PET-TYPES-03 — Nome do tipo no limite de 80 caracteres
 
