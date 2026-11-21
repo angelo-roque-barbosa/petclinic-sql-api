@@ -23,7 +23,7 @@ em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`)
 | [BUG-11](#bug-11--descrição-de-visita-só-com-espaços-é-aceita-e-gravada) | Descrição de visita só com espaços é aceita e gravada | baixo a médio | [#11](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/11) |
 | [BUG-12](#bug-12--visita-com-data-anterior-ao-nascimento-do-pet-é-aceita) | Visita com data anterior ao nascimento do pet é aceita | baixo a médio | [#12](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/12) |
 | [BUG-13](#bug-13--data-enviada-como-número-é-aceita-e-gravada-como-outra-data) | Data enviada como número é aceita e gravada como outra data | baixo a médio | [#13](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/13) |
-| [BUG-14](#bug-14--tipo-de-pet-com-nome-repetido-é-aceito) | Tipo de pet com nome repetido é aceito | baixo a médio | [#14](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/14) |
+| [BUG-14](#bug-14--tipo-de-pet-com-nome-repetido-é-aceito) | Tipo de pet com nome repetido é aceito, inclusive com outra caixa ou espaço no fim | baixo a médio | [#14](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/14) |
 
 ## BUG-01 · API responde 500 em vez de 400 quando o id do dono não é numérico
 
@@ -423,10 +423,12 @@ em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`)
 - **Issue:** [#14](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/14)
 - **Passos:** `docker compose down -v` → `up -d --wait` → contar as linhas de `types` → `POST /api/pettypes` com
   `"name": "cat"`, nome que já existe no seed (tipo 1) → `POST /api/pettypes` com `"name": "Furão"` duas vezes →
-  `GET /api/pettypes` → conferir no banco os nomes repetidos.
+  `GET /api/pettypes` → repetir com o mesmo nome em outra caixa (`Cat`, `CAT`, `Furão`, `FURÃO`) e com espaço no fim
+  (`cat `, `furão `) → conferir no banco os nomes repetidos.
 - **Esperado:** o primeiro `Furão` com `201`; o `cat` e o segundo `Furão` com `400` (o contrato lista o `400` para o
   `POST`; `409 Conflict` também serviria, mas não está no contrato), sem gravar nada. Regra adotada em 2026-11-21: não
-  pode haver dois tipos com o mesmo nome.
+  pode haver dois tipos com o mesmo nome, e o nome é comparado sem diferenciar maiúsculas e sem os espaços das
+  pontas (`Gato`, `gato` e `gato ` são o mesmo tipo).
 - **Obtido:** `201` nos três pedidos. `types` passa de 6 para 9 linhas, e a lista da API mostra os repetidos:
 
   | Nome | Quantos tipos | Ids |
@@ -443,8 +445,18 @@ em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`)
 - **Impacto:** baixo a médio. Um tipo é um item de catálogo: dois `cat` não representam nada de real. O seletor de
   tipo mostra o nome repetido, os pets do mesmo tipo ficam divididos entre dois ids e relatórios por tipo saem
   errados. Com o BUG-07, apagar um dos `cat` repetidos ainda apaga os pets dele.
-- **Fora deste bug, por enquanto:** o mesmo nome com outra caixa (`Cat`) ou com espaço no fim (`cat `) também é
-  aceito; fica para o `CT-API-PET-TYPES-05` decidir se amplia este bug.
+- **Outra caixa e espaço no fim (ampliação de 2026-11-21, no `CT-API-PET-TYPES-05`):** `201` em todas as variações.
+  Espaço no começo é recusado com `400`, mas pelo `pattern`, que exige uma letra no início, e não por ser repetido.
+
+  | Enviado | Já existia | Resposta |
+  |:---|:---|:---|
+  | `Cat`, `CAT` e `cat ` | `cat` (seed) | `201` nos três |
+  | `Furão`, `FURÃO` e `furão ` | `furão` | `201` nos três |
+  | ` furão` (espaço no começo) | `furão` | `400`, pelo `pattern` |
+
+  O banco ficou com quatro tipos que são o mesmo para uma pessoa em cada grupo: `cat`, `Cat`, `CAT` e `cat `;
+  `furão`, `Furão`, `FURÃO` e `furão `. `types` passou de 6 para 13 linhas e voltou a 6 depois da limpeza.
+  Reproduzido do zero em 2026-11-21.
 
 ## Observações
 

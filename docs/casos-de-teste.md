@@ -680,7 +680,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Contar as linhas de `types`.<br>2. Para cada corpo, enviar POST /api/pettypes.<br>3. Verificar cada resposta e contar de novo. |
 | **Resultado esperado** | Status 400 em todos e mesma contagem. |
 | **Status** | Não executado |
-| **Observações** | Dicionário: o banco aceita NULL e `''`.<br>Em 2026-11-21, os quatro corpos responderam 400 apontando só o campo `name`, e nenhum tipo foi gravado: quem recusa é a validação da API (`@NotNull`, tamanho de 1 a 80 e o `pattern` do contrato, que exige uma letra no início). Na coleção do Postman: `CT-API-PET-TYPES-02a` a `02d`, um por corpo, na pasta Pets, logo depois do `CT-API-PET-TYPES-01`.<br>Espaço no fim é aceito: `'gato '` foi gravado com o espaço, porque o `pattern` permite espaço depois da primeira letra. Fica para o CT-API-PET-TYPES-04 (nome repetido). |
+| **Observações** | Dicionário: o banco aceita NULL e `''`.<br>Em 2026-11-21, os quatro corpos responderam 400 apontando só o campo `name`, e nenhum tipo foi gravado: quem recusa é a validação da API (`@NotNull`, tamanho de 1 a 80 e o `pattern` do contrato, que exige uma letra no início). Na coleção do Postman: `CT-API-PET-TYPES-02a` a `02d`, um por corpo, na pasta Pets, logo depois do `CT-API-PET-TYPES-01`.<br>Espaço no fim é aceito: `'gato '` foi gravado com o espaço, porque o `pattern` permite espaço depois da primeira letra. Ao lado de `gato`, isso é nome repetido: entrou no BUG-14 (CT-API-PET-TYPES-05). |
 
 #### CT-API-PET-TYPES-03 — Nome do tipo no limite de 80 caracteres
 
@@ -724,7 +724,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Enviar POST /api/pettypes com o nome em outra caixa.<br>2. Verificar a resposta.<br>3. Contar no banco os tipos com esse nome, sem diferenciar maiúsculas. |
 | **Resultado esperado** | Status 4xx (409) e um tipo. |
 | **Status** | Não executado |
-| **Observações** | Dicionário: o banco aceita `Cat` ao lado de `cat`.<br>Regra a confirmar. |
+| **Observações** | Dicionário: o banco aceita `Cat` ao lado de `cat`.<br>Regra adotada em 2026-11-21: o nome do tipo é comparado sem diferenciar maiúsculas e sem os espaços das pontas, porque `Gato`, `gato` e `gato ` são o mesmo item de catálogo para uma pessoa. Hoje todas essas variações são aceitas com 201, o que ampliou o BUG-14 (CT-BUG-14-01). Espaço no começo dá 400, mas pelo `pattern`, não por repetição. Nenhum valor passa, então o caso não entra na coleção do Postman. |
 
 #### CT-API-PET-TYPES-06 — Atualizar nome do tipo
 
@@ -1483,9 +1483,9 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Bug relacionado** | BUG-14 |
 | **Objetivo** | Garantir que a API não grava dois tipos com o mesmo nome. |
 | **Pré-condições** | Tipo com nome único criado via API. |
-| **Dados de teste** | O mesmo nome do tipo criado; `cat`, que existe no seed (tipo 1). |
-| **Passos** | 1. Contar no banco os tipos com cada nome.<br>2. Para cada nome, enviar POST /api/pettypes.<br>3. Verificar cada resposta.<br>4. Contar de novo. |
+| **Dados de teste** | O mesmo nome do tipo criado; `cat`, que existe no seed (tipo 1); `Cat`, `CAT` e `cat ` (outra caixa e espaço no fim, CT-API-PET-TYPES-05). |
+| **Passos** | 1. Contar no banco os tipos com cada nome, sem diferenciar maiúsculas e sem os espaços das pontas.<br>2. Para cada nome, enviar POST /api/pettypes.<br>3. Verificar cada resposta.<br>4. Contar de novo. |
 | **Resultado esperado** | Passo 3: status 400 (ou 409) apontando o campo `name`.<br>Passo 4: um tipo com cada nome. |
-| **Resultado obtido** | Passo 3: status 201 nos dois. Passo 4: dois tipos com cada nome (BUGS.md). |
+| **Resultado obtido** | Passo 3: status 201 em todos. Passo 4: um tipo a mais por pedido, todos com o mesmo nome para uma pessoa (BUGS.md). |
 | **Status** | Não executado |
-| **Observações** | Reproduzido do zero em 2026-11-21. Um caso parametrizado por nome (`pytest.mark.parametrize`). Depende do tipo `cat` do `populateDB.sql`, para provar que o seed também é protegido. Teardown: tipos criados; cada remoção aceita "já removido". |
+| **Observações** | Reproduzido do zero em 2026-11-21, também com outra caixa e espaço no fim. Um caso parametrizado por nome (`pytest.mark.parametrize`). Depende do tipo `cat` do `populateDB.sql`, para provar que o seed também é protegido. Teardown: tipos criados; cada remoção aceita "já removido". |
