@@ -817,6 +817,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Para cada tamanho, enviar POST /api/specialties.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | 80: status 2xx e nome gravado com 80 caracteres.<br>81: status 400 e nenhuma especialidade nova. |
 | **Status** | Não executado |
+| **Observações** | Em 2026-11-22, 80 caracteres responderam 201 e foram gravados inteiros; 81 responderam 400 apontando o campo `name`, sem gravar nada. 80 caracteres com `&`, `/` e letras acentuadas também foram aceitos. Na coleção do Postman: `CT-API-SPECIALTIES-03a` (80) e `03b` (81), na pasta Specialties. |
 
 #### CT-API-SPECIALTIES-04 — Especialidade com nome já existente
 
