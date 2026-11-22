@@ -769,7 +769,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Enviar DELETE /api/pettypes/{id}.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | Status 4xx (409); o tipo e o pet continuam no banco, com o mesmo type_id. |
 | **Status** | Não executado |
-| **Observações** | Dicionário: a chave `pets_type_id_fkey` recusa no banco. Um 500 indica que a regra ficou só no banco.<br>Hoje a API responde 204 e apaga o tipo, os pets e as visitas: é o BUG-07 (CT-BUG-07-01). O contrato não documenta 409. |
+| **Observações** | Dicionário: a chave `pets_type_id_fkey` recusa no banco. Um 500 indica que a regra ficou só no banco.<br>Hoje a API responde 204 e apaga o tipo, os pets e as visitas: é o BUG-07 (CT-BUG-07-01). O contrato não documenta 409.<br>Reconfirmado em 2026-11-22: com um tipo, um pet dele e uma visita do pet, o DELETE do tipo respondeu 204 e os três sumiram (o dono ficou). Nenhum valor passa, então o caso não entra na coleção do Postman, que continua sem falhas conhecidas. |
 
 ### tests/api/test_specialties.py
 
