@@ -3865,6 +3865,44 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "CT-API-SPECIALTIES-07",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/specialties/{{deleteSpecialtyId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "specialties",
+                "{{deleteSpecialtyId}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Cria duas especialidades sem veterinários: a que será apagada e outra, que tem\n// de continuar; depois conta as especialidades e as ligações veterinário-especialidade\nconst base = pm.environment.get(\"baseUrl\");\n\nfunction post(name, next) {\n  pm.sendRequest({\n    url: base + \"/specialties\",\n    method: \"POST\",\n    header: { \"Content-Type\": \"application/json\" },\n    body: { mode: \"raw\", raw: JSON.stringify({ name: name }) }\n  }, (err, res) => {\n    if (err) throw err;\n    if (res.code !== 201) throw new Error(\"Preparação falhou: POST da especialidade devolveu \" + res.code);\n    next(res.json());\n  });\n}\n\npost(\"Neurologia\", (target) => {\n  pm.collectionVariables.set(\"deleteSpecialtyId\", target.id);\n  post(\"Oftalmologia\", (kept) => {\n    pm.collectionVariables.set(\"keptSpecialtyId\", kept.id);\n    pm.collectionVariables.set(\"keptSpecialtyName\", kept.name);\n    pm.sendRequest(base + \"/specialties\", (specErr, specRes) => {\n      if (specErr) throw specErr;\n      pm.collectionVariables.set(\"specialtiesCountBefore\", specRes.json().length);\n      pm.sendRequest(base + \"/vets\", (vetsErr, vetsRes) => {\n        if (vetsErr) throw vetsErr;\n        const links = vetsRes.json().reduce((sum, vet) => sum + vet.specialties.length, 0);\n        pm.collectionVariables.set(\"vetSpecialtyLinksBefore\", links);\n      });\n    });\n  });\n});\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.environment.get(\"baseUrl\");\nconst deletedId = pm.collectionVariables.get(\"deleteSpecialtyId\");\nconst keptId = pm.collectionVariables.get(\"keptSpecialtyId\");\nconst keptName = pm.collectionVariables.get(\"keptSpecialtyName\");\nconst specialtiesBefore = Number(pm.collectionVariables.get(\"specialtiesCountBefore\"));\nconst linksBefore = Number(pm.collectionVariables.get(\"vetSpecialtyLinksBefore\"));\n\npm.test(\"status 204\", () => pm.response.to.have.status(204));\n\npm.test(\"responde em menos de 500 ms\", () => {\n  pm.expect(pm.response.responseTime).to.be.below(500);\n});\n\n// A especialidade apagada não pode mais ser encontrada\npm.sendRequest(base + \"/specialties/\" + deletedId, (err, res) => {\n  pm.test(\"especialidade apagada não existe mais (GET devolve 404)\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(404);\n  });\n});\n\n// Saiu exatamente uma especialidade\npm.sendRequest(base + \"/specialties\", (err, res) => {\n  pm.test(\"uma especialidade a menos no total\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.json().length).to.eql(specialtiesBefore - 1);\n  });\n});\n\n// A outra especialidade continua, com o mesmo nome\npm.sendRequest(base + \"/specialties/\" + keptId, (err, res) => {\n  pm.test(\"a outra especialidade continua, com o mesmo nome\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(200);\n    pm.expect(res.json().name).to.eql(keptName);\n  });\n});\n\n// Especialidade sem veterinários: nenhum veterinário pode ter perdido especialidade\npm.sendRequest(base + \"/vets\", (err, res) => {\n  pm.test(\"ligações veterinário-especialidade não mudaram\", () => {\n    pm.expect(err).to.be.null;\n    const links = res.json().reduce((sum, vet) => sum + vet.specialties.length, 0);\n    pm.expect(links).to.eql(linksBefore);\n  });\n});\n"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -4508,6 +4546,35 @@
                 "type": "text/javascript",
                 "exec": [
                   "// URL já com o id real (ex.: http://localhost:9966/petclinic/api/specialties/4)\nconst url = pm.variables.replaceIn(pm.request.url.toString());\n\n// \"Já removido\" também é sucesso para uma limpeza\npm.test(\"especialidade apagada ou já removida (204 ou 404)\", () => {\n  pm.expect(pm.response.code).to.be.oneOf([204, 404]);\n});\n\n// Confere que a especialidade não existe mais\npm.sendRequest(url, (err, res) => {\n  pm.test(\"especialidade não existe mais (GET devolve 404)\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(404);\n  });\n});\n"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Limpeza: CT-API-SPECIALTIES-07",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/specialties/{{keptSpecialtyId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "specialties",
+                "{{keptSpecialtyId}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Apaga a especialidade que ficou (na URL) e, se ainda existir, a do teste\nconst base = pm.environment.get(\"baseUrl\");\nconst url = pm.variables.replaceIn(pm.request.url.toString());\nconst deletedUrl = base + \"/specialties/\" + pm.collectionVariables.get(\"deleteSpecialtyId\");\n\n// \"Já removido\" também é sucesso para uma limpeza\npm.test(\"especialidade mantida apagada ou já removida (204 ou 404)\", () => {\n  pm.expect(pm.response.code).to.be.oneOf([204, 404]);\n});\n\npm.sendRequest(url, (err, res) => {\n  pm.test(\"especialidade mantida não existe mais (GET devolve 404)\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(404);\n  });\n\n  // Numa execução normal, a especialidade do teste já saiu (404)\n  pm.sendRequest({ url: deletedUrl, method: \"DELETE\" }, (delErr, delRes) => {\n    pm.test(\"especialidade do teste apagada ou já removida (204 ou 404)\", () => {\n      pm.expect(delErr).to.be.null;\n      pm.expect(delRes.code).to.be.oneOf([204, 404]);\n    });\n\n    pm.sendRequest(deletedUrl, (getErr, getRes) => {\n      pm.test(\"especialidade do teste não existe mais (GET devolve 404)\", () => {\n        pm.expect(getErr).to.be.null;\n        pm.expect(getRes.code).to.eql(404);\n      });\n    });\n  });\n});\n"
                 ]
               }
             }
@@ -5165,6 +5232,22 @@
     },
     {
       "key": "renameSpecialtyOldName",
+      "value": ""
+    },
+    {
+      "key": "deleteSpecialtyId",
+      "value": ""
+    },
+    {
+      "key": "keptSpecialtyId",
+      "value": ""
+    },
+    {
+      "key": "keptSpecialtyName",
+      "value": ""
+    },
+    {
+      "key": "vetSpecialtyLinksBefore",
       "value": ""
     }
   ]
