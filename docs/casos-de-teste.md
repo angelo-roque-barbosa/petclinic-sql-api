@@ -946,7 +946,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Contar as linhas de `vets`.<br>2. Para cada variação, enviar POST /api/vets.<br>3. Verificar cada resposta e contar de novo. |
 | **Resultado esperado** | Status 400 em todos e mesma contagem. |
 | **Status** | Não executado |
-| **Observações** | Dicionário: o banco aceita veterinário com nome e sobrenome NULL. |
+| **Observações** | Dicionário: o banco aceita veterinário com nome e sobrenome NULL.<br>Em 2026-11-22, as quatro variações responderam 400 apontando só o campo da variação, e nenhum veterinário foi gravado; `null` e só espaços também dão 400. Na coleção do Postman: `CT-API-VETS-02a` a `02d`, um por variação. O corpo leva `"specialties": []`, porque a lista é obrigatória: sem ela, a resposta é 400 por `specialties`. |
 
 #### CT-API-VETS-03 — Nome do veterinário fora do padrão ou do limite
 
