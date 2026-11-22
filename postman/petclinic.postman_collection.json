@@ -1978,6 +1978,44 @@
           "response": []
         },
         {
+          "name": "CT-API-PET-TYPES-07",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pettypes/{{deletePetTypeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pettypes",
+                "{{deletePetTypeId}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Cria dois tipos sem pets: o que será apagado e outro, que tem de continuar;\n// depois conta os tipos e os pets\nconst base = pm.environment.get(\"baseUrl\");\n\nfunction post(name, next) {\n  pm.sendRequest({\n    url: base + \"/pettypes\",\n    method: \"POST\",\n    header: { \"Content-Type\": \"application/json\" },\n    body: { mode: \"raw\", raw: JSON.stringify({ name: name }) }\n  }, (err, res) => {\n    if (err) throw err;\n    if (res.code !== 201) throw new Error(\"Preparação falhou: POST do tipo devolveu \" + res.code);\n    next(res.json());\n  });\n}\n\npost(\"Chinchila\", (target) => {\n  pm.collectionVariables.set(\"deletePetTypeId\", target.id);\n  post(\"Tartaruga\", (kept) => {\n    pm.collectionVariables.set(\"keptPetTypeId\", kept.id);\n    pm.collectionVariables.set(\"keptPetTypeName\", kept.name);\n    pm.sendRequest(base + \"/pettypes\", (typesErr, typesRes) => {\n      if (typesErr) throw typesErr;\n      pm.collectionVariables.set(\"petTypesCountBefore\", typesRes.json().length);\n      pm.sendRequest(base + \"/pets\", (petsErr, petsRes) => {\n        if (petsErr) throw petsErr;\n        pm.collectionVariables.set(\"petsCountBefore\", petsRes.json().length);\n      });\n    });\n  });\n});\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.environment.get(\"baseUrl\");\nconst deletedId = pm.collectionVariables.get(\"deletePetTypeId\");\nconst keptId = pm.collectionVariables.get(\"keptPetTypeId\");\nconst keptName = pm.collectionVariables.get(\"keptPetTypeName\");\nconst typesBefore = Number(pm.collectionVariables.get(\"petTypesCountBefore\"));\nconst petsBefore = Number(pm.collectionVariables.get(\"petsCountBefore\"));\n\npm.test(\"status 204\", () => pm.response.to.have.status(204));\n\npm.test(\"responde em menos de 500 ms\", () => {\n  pm.expect(pm.response.responseTime).to.be.below(500);\n});\n\n// O tipo apagado não pode mais ser encontrado\npm.sendRequest(base + \"/pettypes/\" + deletedId, (err, res) => {\n  pm.test(\"tipo apagado não existe mais (GET devolve 404)\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(404);\n  });\n});\n\n// Saiu exatamente um tipo\npm.sendRequest(base + \"/pettypes\", (err, res) => {\n  pm.test(\"um tipo a menos no total\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.json().length).to.eql(typesBefore - 1);\n  });\n});\n\n// O outro tipo continua, com o mesmo nome\npm.sendRequest(base + \"/pettypes/\" + keptId, (err, res) => {\n  pm.test(\"o outro tipo continua, com o mesmo nome\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(200);\n    pm.expect(res.json().name).to.eql(keptName);\n  });\n});\n\n// Tipo sem pets: nenhum pet pode ter saído junto\npm.sendRequest(base + \"/pets\", (err, res) => {\n  pm.test(\"quantidade de pets não mudou\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.json().length).to.eql(petsBefore);\n  });\n});\n"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "CT-API-PETS-01",
           "event": [
             {
@@ -3965,6 +4003,35 @@
           ]
         },
         {
+          "name": "Limpeza: CT-API-PET-TYPES-07",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pettypes/{{keptPetTypeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pettypes",
+                "{{keptPetTypeId}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Apaga o tipo que ficou (na URL) e, se ainda existir, o do teste\nconst base = pm.environment.get(\"baseUrl\");\nconst url = pm.variables.replaceIn(pm.request.url.toString());\nconst deletedUrl = base + \"/pettypes/\" + pm.collectionVariables.get(\"deletePetTypeId\");\n\n// \"Já removido\" também é sucesso para uma limpeza\npm.test(\"tipo mantido apagado ou já removido (204 ou 404)\", () => {\n  pm.expect(pm.response.code).to.be.oneOf([204, 404]);\n});\n\npm.sendRequest(url, (err, res) => {\n  pm.test(\"tipo mantido não existe mais (GET devolve 404)\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(404);\n  });\n\n  // Numa execução normal, o tipo do teste já saiu (404)\n  pm.sendRequest({ url: deletedUrl, method: \"DELETE\" }, (delErr, delRes) => {\n    pm.test(\"tipo do teste apagado ou já removido (204 ou 404)\", () => {\n      pm.expect(delErr).to.be.null;\n      pm.expect(delRes.code).to.be.oneOf([204, 404]);\n    });\n\n    pm.sendRequest(deletedUrl, (getErr, getRes) => {\n      pm.test(\"tipo do teste não existe mais (GET devolve 404)\", () => {\n        pm.expect(getErr).to.be.null;\n        pm.expect(getRes.code).to.eql(404);\n      });\n    });\n  });\n});\n"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Limpeza: CT-API-OWNERS-03b",
           "event": [
             {
@@ -4580,6 +4647,18 @@
     },
     {
       "key": "renamePetTypeOldName",
+      "value": ""
+    },
+    {
+      "key": "deletePetTypeId",
+      "value": ""
+    },
+    {
+      "key": "keptPetTypeId",
+      "value": ""
+    },
+    {
+      "key": "keptPetTypeName",
       "value": ""
     }
   ]

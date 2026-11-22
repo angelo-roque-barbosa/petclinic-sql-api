@@ -754,6 +754,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Enviar DELETE /api/pettypes/{id}.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | Status 2xx e nenhuma linha de `types` com esse id. |
 | **Status** | Não executado |
+| **Observações** | Em 2026-11-22, a API respondeu 204, o tipo sumiu e um segundo DELETE respondeu 404. Na coleção do Postman: `CT-API-PET-TYPES-07`, que cria dois tipos sem pets e apaga só um; o outro é o controle, e a quantidade de pets também é conferida, porque apagar tipo apaga os pets dele (BUG-07). |
 
 #### CT-API-PET-TYPES-08 — Apagar tipo em uso
 
