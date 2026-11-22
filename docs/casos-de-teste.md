@@ -932,7 +932,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Enviar POST /api/vets.<br>2. Verificar a resposta.<br>3. Buscar no banco a linha de `vets` e as linhas de `vet_specialties` com o id devolvido. |
 | **Resultado esperado** | Passo 2: status 2xx de criação.<br>Passo 3: first_name e last_name iguais aos enviados; exatamente duas ligações, com os ids das duas especialidades. |
 | **Status** | Não executado |
-| **Observações** | Teardown: vet (com as ligações), depois as especialidades; cada remoção aceita "já removido". |
+| **Observações** | Teardown: vet (com as ligações), depois as especialidades; cada remoção aceita "já removido".<br>Em 2026-11-22, a API respondeu 201 e gravou o nome, o sobrenome e exatamente as duas ligações. Na coleção do Postman: `CT-API-VETS-01`, na pasta Vets. Na limpeza, a confirmação por GET é essencial: se o veterinário não for apagado, o DELETE da especialidade responde 404 (BUG-16), que a limpeza aceitaria como "já removida".<br>Cada item de `specialties` exige `name`: só com `id`, a resposta é 400. Com um `id` válido e um `name` que não existe, o veterinário foi criado sem a especialidade: fica para o CT-API-VETS-06. |
 
 #### CT-API-VETS-02 — Criar veterinário sem nome ou sobrenome
 
