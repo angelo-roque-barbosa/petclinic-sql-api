@@ -739,7 +739,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Enviar PUT /api/pettypes/{id} com o novo nome.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | Status 2xx e a linha com o mesmo id tem o novo nome. |
 | **Status** | Não executado |
-| **Observações** | Em 2026-11-22, o PUT respondeu 204 e gravou o nome novo na mesma linha, sem criar outro tipo. O contrato exige `id` no corpo (`PetType`): sem ele, a resposta é 400. Com um `id` no corpo diferente do da URL, vale o da URL e o outro tipo não muda. Na coleção do Postman: `CT-API-PET-TYPES-06`, que cria o próprio tipo no Before request.<br>Renomear para um nome que já existe (`cat`) também responde 204 e deixa dois `cat`: a mesma regra do BUG-14, agora pelo PUT. |
+| **Observações** | Em 2026-11-22, o PUT respondeu 204 e gravou o nome novo na mesma linha, sem criar outro tipo. O contrato exige `id` no corpo (`PetType`): sem ele, a resposta é 400. Com um `id` no corpo diferente do da URL, vale o da URL e o outro tipo não muda. Na coleção do Postman: `CT-API-PET-TYPES-06`, que cria o próprio tipo no Before request.<br>Renomear para um nome que já existe (`cat`) também responde 204 e deixa dois `cat`: isso ampliou o BUG-14 (CT-BUG-14-01) em 2026-11-22. |
 
 #### CT-API-PET-TYPES-07 — Apagar tipo sem pets
 
@@ -1484,9 +1484,9 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Bug relacionado** | BUG-14 |
 | **Objetivo** | Garantir que a API não grava dois tipos com o mesmo nome. |
 | **Pré-condições** | Tipo com nome único criado via API. |
-| **Dados de teste** | O mesmo nome do tipo criado; `cat`, que existe no seed (tipo 1); `Cat`, `CAT` e `cat ` (outra caixa e espaço no fim, CT-API-PET-TYPES-05). |
-| **Passos** | 1. Contar no banco os tipos com cada nome, sem diferenciar maiúsculas e sem os espaços das pontas.<br>2. Para cada nome, enviar POST /api/pettypes.<br>3. Verificar cada resposta.<br>4. Contar de novo. |
+| **Dados de teste** | O mesmo nome do tipo criado; `cat`, que existe no seed (tipo 1); `Cat`, `CAT` e `cat ` (outra caixa e espaço no fim, CT-API-PET-TYPES-05); PUT de um tipo próprio renomeando para `cat` (CT-API-PET-TYPES-06). |
+| **Passos** | 1. Contar no banco os tipos com cada nome, sem diferenciar maiúsculas e sem os espaços das pontas.<br>2. Para cada nome, enviar POST /api/pettypes; para o rename, PUT /api/pettypes/{id do tipo próprio}.<br>3. Verificar cada resposta.<br>4. Contar de novo. |
 | **Resultado esperado** | Passo 3: status 400 (ou 409) apontando o campo `name`.<br>Passo 4: um tipo com cada nome. |
-| **Resultado obtido** | Passo 3: status 201 em todos. Passo 4: um tipo a mais por pedido, todos com o mesmo nome para uma pessoa (BUGS.md). |
+| **Resultado obtido** | Passo 3: status 201 nos POST e 204 no PUT. Passo 4: mais de um tipo com o mesmo nome para uma pessoa (BUGS.md). |
 | **Status** | Não executado |
-| **Observações** | Reproduzido do zero em 2026-11-21, também com outra caixa e espaço no fim. Um caso parametrizado por nome (`pytest.mark.parametrize`). Depende do tipo `cat` do `populateDB.sql`, para provar que o seed também é protegido. Teardown: tipos criados; cada remoção aceita "já removido". |
+| **Observações** | Reproduzido do zero em 2026-11-21, também com outra caixa e espaço no fim; o PUT, em 2026-11-22. Um caso parametrizado por nome (`pytest.mark.parametrize`). Depende do tipo `cat` do `populateDB.sql`, para provar que o seed também é protegido. Teardown: tipos criados; cada remoção aceita "já removido". |

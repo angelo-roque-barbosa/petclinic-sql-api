@@ -23,7 +23,7 @@ em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`)
 | [BUG-11](#bug-11--descrição-de-visita-só-com-espaços-é-aceita-e-gravada) | Descrição de visita só com espaços é aceita e gravada | baixo a médio | [#11](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/11) |
 | [BUG-12](#bug-12--visita-com-data-anterior-ao-nascimento-do-pet-é-aceita) | Visita com data anterior ao nascimento do pet é aceita | baixo a médio | [#12](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/12) |
 | [BUG-13](#bug-13--data-enviada-como-número-é-aceita-e-gravada-como-outra-data) | Data enviada como número é aceita e gravada como outra data | baixo a médio | [#13](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/13) |
-| [BUG-14](#bug-14--tipo-de-pet-com-nome-repetido-é-aceito) | Tipo de pet com nome repetido é aceito, inclusive com outra caixa ou espaço no fim | baixo a médio | [#14](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/14) |
+| [BUG-14](#bug-14--tipo-de-pet-com-nome-repetido-é-aceito) | Tipo de pet com nome repetido é aceito, inclusive com outra caixa ou espaço no fim e ao renomear | baixo a médio | [#14](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/14) |
 
 ## BUG-01 · API responde 500 em vez de 400 quando o id do dono não é numérico
 
@@ -440,8 +440,12 @@ em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`)
 - **Evidência no banco:** a contagem de `types` (6 antes, 9 depois e 6 depois da limpeza) e o agrupamento por nome,
   com dois `cat` e dois `Furão`. O índice `types_name_idx` existe, mas não é `UNIQUE`. Reproduzido do zero em
   2026-11-21, na imagem `4.0.2` (digest `sha256:daba846d…`).
-- **Causa provável:** a API não confere se o nome já existe antes de gravar, e o banco não tem restrição de
-  unicidade no nome.
+- **Também pelo `PUT` (ampliação de 2026-11-22, no `CT-API-PET-TYPES-06`):** renomear um tipo para um nome que já
+  existe responde `204` e grava o nome repetido. Com um tipo novo (id 7, `Coelho`), o `PUT /api/pettypes/7` com
+  `"name": "cat"` deixou dois `cat` (ids 1 e 7); com `Dog` e `hamster ` (espaço no fim), também `204`. `types` ficou
+  com 7 linhas o tempo todo: o `PUT` não cria tipo, só repete o nome. Reproduzido do zero em 2026-11-22.
+- **Causa provável:** a API não confere se o nome já existe antes de gravar, nem no `POST` nem no `PUT`, e o banco
+  não tem restrição de unicidade no nome.
 - **Impacto:** baixo a médio. Um tipo é um item de catálogo: dois `cat` não representam nada de real. O seletor de
   tipo mostra o nome repetido, os pets do mesmo tipo ficam divididos entre dois ids e relatórios por tipo saem
   errados. Com o BUG-07, apagar um dos `cat` repetidos ainda apaga os pets dele.

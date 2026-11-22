@@ -126,7 +126,7 @@ esperado, obtido, evidência e causa) estão em [BUGS.md](BUGS.md).
 | BUG-11 | `POST` de visita aceita e grava descrição só com espaços | baixo a médio | [#11](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/11) |
 | BUG-12 | `POST` de visita aceita data anterior ao nascimento do pet | baixo a médio | [#12](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/12) |
 | BUG-13 | Data enviada como número é lida como dias desde 1970 e gravada: um timestamp vira visita no ano 4,9 milhões, com 201 | baixo a médio | [#13](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/13) |
-| BUG-14 | `POST /api/pettypes` aceita nome repetido, inclusive com outra caixa ou espaço no fim: o banco fica com `cat`, `Cat`, `CAT` e `cat ` | baixo a médio | [#14](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/14) |
+| BUG-14 | `POST /api/pettypes` aceita nome repetido, inclusive com outra caixa ou espaço no fim, e o `PUT` renomeia para um nome que já existe: o banco fica com `cat`, `Cat`, `CAT` e `cat ` | baixo a médio | [#14](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/14) |
 
 **OBS-01:** o contrato documenta 200 como sucesso em sete endpoints, mas a API devolve 201 ou 204 (o correto). Não
 é bug; fica para a validação de contrato da fase 5.
