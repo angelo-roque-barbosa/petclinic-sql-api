@@ -803,7 +803,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Contar as linhas de `specialties`.<br>2. Para cada corpo, enviar POST /api/specialties.<br>3. Verificar cada resposta e contar de novo. |
 | **Resultado esperado** | Status 400 em todos e mesma contagem. |
 | **Status** | Não executado |
-| **Observações** | Dicionário: o banco aceita NULL e `''`. |
+| **Observações** | Dicionário: o banco aceita NULL e `''`.<br>Em 2026-11-22, os quatro corpos responderam 400 apontando só o campo `name`, e nenhuma especialidade foi gravada, como no CT-API-PET-TYPES-02. Na coleção do Postman: `CT-API-SPECIALTIES-02a` a `02d`, um por corpo, na pasta Specialties.<br>Espaço no fim é aceito: `'cirurgia '` foi gravado com o espaço, porque o `pattern` permite espaço depois da primeira letra. Fica para o CT-API-SPECIALTIES-04 (nome repetido). |
 
 #### CT-API-SPECIALTIES-03 — Nome da especialidade no limite de 80 caracteres
 

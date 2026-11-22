@@ -3521,6 +3521,202 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "CT-API-SPECIALTIES-02a",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Quantas especialidades existem antes do POST\npm.sendRequest(pm.environment.get(\"baseUrl\") + \"/specialties\", (err, res) => {\n  if (err) throw err;\n  pm.collectionVariables.set(\"specialtiesCountBefore\", res.json().length);\n});\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const sent = JSON.parse(pm.request.body.raw);\nconst countBefore = Number(pm.collectionVariables.get(\"specialtiesCountBefore\"));\n\npm.test(\"corpo enviado não tem o campo name\", () => {\n  pm.expect(sent).to.not.have.property(\"name\");\n});\n\npm.test(\"status 400\", () => pm.response.to.have.status(400));\n\n// O 400 tem de ser pelo nome, não por outro campo\npm.test(\"erro aponta o campo name\", () => {\n  const errors = pm.response.json().schemaValidationErrors;\n  pm.expect(errors, \"lista de erros de validação\").to.be.an(\"array\").and.not.empty;\n  errors.forEach((e) => pm.expect(e.field).to.eql(\"name\"));\n});\n\npm.test(\"responde em menos de 500 ms\", () => {\n  pm.expect(pm.response.responseTime).to.be.below(500);\n});\n\n// Nenhuma especialidade pode ter sido criada\npm.sendRequest(pm.environment.get(\"baseUrl\") + \"/specialties\", (err, res) => {\n  pm.test(\"quantidade de especialidades não mudou\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.json().length).to.eql(countBefore);\n  });\n});\n"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/specialties",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "specialties"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "CT-API-SPECIALTIES-02b",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Quantas especialidades existem antes do POST\npm.sendRequest(pm.environment.get(\"baseUrl\") + \"/specialties\", (err, res) => {\n  if (err) throw err;\n  pm.collectionVariables.set(\"specialtiesCountBefore\", res.json().length);\n});\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const sent = JSON.parse(pm.request.body.raw);\nconst countBefore = Number(pm.collectionVariables.get(\"specialtiesCountBefore\"));\n\npm.test(\"name enviado é null\", () => {\n  pm.expect(sent).to.have.property(\"name\");\n  pm.expect(sent.name).to.be.null;\n});\n\npm.test(\"status 400\", () => pm.response.to.have.status(400));\n\n// O 400 tem de ser pelo nome, não por outro campo\npm.test(\"erro aponta o campo name\", () => {\n  const errors = pm.response.json().schemaValidationErrors;\n  pm.expect(errors, \"lista de erros de validação\").to.be.an(\"array\").and.not.empty;\n  errors.forEach((e) => pm.expect(e.field).to.eql(\"name\"));\n});\n\npm.test(\"responde em menos de 500 ms\", () => {\n  pm.expect(pm.response.responseTime).to.be.below(500);\n});\n\n// Nenhuma especialidade pode ter sido criada\npm.sendRequest(pm.environment.get(\"baseUrl\") + \"/specialties\", (err, res) => {\n  pm.test(\"quantidade de especialidades não mudou\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.json().length).to.eql(countBefore);\n  });\n});\n"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/specialties",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "specialties"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "CT-API-SPECIALTIES-02c",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Quantas especialidades existem antes do POST\npm.sendRequest(pm.environment.get(\"baseUrl\") + \"/specialties\", (err, res) => {\n  if (err) throw err;\n  pm.collectionVariables.set(\"specialtiesCountBefore\", res.json().length);\n});\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const sent = JSON.parse(pm.request.body.raw);\nconst countBefore = Number(pm.collectionVariables.get(\"specialtiesCountBefore\"));\n\npm.test(\"name enviado é texto vazio\", () => {\n  pm.expect(sent.name).to.eql(\"\");\n});\n\npm.test(\"status 400\", () => pm.response.to.have.status(400));\n\n// O 400 tem de ser pelo nome, não por outro campo\npm.test(\"erro aponta o campo name\", () => {\n  const errors = pm.response.json().schemaValidationErrors;\n  pm.expect(errors, \"lista de erros de validação\").to.be.an(\"array\").and.not.empty;\n  errors.forEach((e) => pm.expect(e.field).to.eql(\"name\"));\n});\n\npm.test(\"responde em menos de 500 ms\", () => {\n  pm.expect(pm.response.responseTime).to.be.below(500);\n});\n\n// Nenhuma especialidade pode ter sido criada\npm.sendRequest(pm.environment.get(\"baseUrl\") + \"/specialties\", (err, res) => {\n  pm.test(\"quantidade de especialidades não mudou\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.json().length).to.eql(countBefore);\n  });\n});\n"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/specialties",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "specialties"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "CT-API-SPECIALTIES-02d",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Quantas especialidades existem antes do POST\npm.sendRequest(pm.environment.get(\"baseUrl\") + \"/specialties\", (err, res) => {\n  if (err) throw err;\n  pm.collectionVariables.set(\"specialtiesCountBefore\", res.json().length);\n});\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const sent = JSON.parse(pm.request.body.raw);\nconst countBefore = Number(pm.collectionVariables.get(\"specialtiesCountBefore\"));\n\npm.test(\"name enviado tem só espaços\", () => {\n  pm.expect(sent.name).to.be.a(\"string\").and.not.empty;\n  pm.expect(sent.name.trim()).to.eql(\"\");\n});\n\npm.test(\"status 400\", () => pm.response.to.have.status(400));\n\n// O 400 tem de ser pelo nome, não por outro campo\npm.test(\"erro aponta o campo name\", () => {\n  const errors = pm.response.json().schemaValidationErrors;\n  pm.expect(errors, \"lista de erros de validação\").to.be.an(\"array\").and.not.empty;\n  errors.forEach((e) => pm.expect(e.field).to.eql(\"name\"));\n});\n\npm.test(\"responde em menos de 500 ms\", () => {\n  pm.expect(pm.response.responseTime).to.be.below(500);\n});\n\n// Nenhuma especialidade pode ter sido criada\npm.sendRequest(pm.environment.get(\"baseUrl\") + \"/specialties\", (err, res) => {\n  pm.test(\"quantidade de especialidades não mudou\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.json().length).to.eql(countBefore);\n  });\n});\n"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"   \"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/specialties",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "specialties"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -4743,6 +4939,10 @@
     },
     {
       "key": "specialtyId",
+      "value": ""
+    },
+    {
+      "key": "specialtiesCountBefore",
       "value": ""
     }
   ]
