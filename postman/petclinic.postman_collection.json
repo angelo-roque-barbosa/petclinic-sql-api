@@ -3903,6 +3903,43 @@
               }
             }
           ]
+        },
+        {
+          "name": "CT-API-SPECIALTIES-09",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const sent = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));\nconst body = pm.response.json();\n\n// O nome tem de ter cada caractere especial que o pattern permite\npm.test(\"nome enviado tem acento, espaço, &, / e -\", () => {\n  [\"é\", \" \", \"&\", \"/\", \"-\"].forEach((ch) => {\n    pm.expect(sent.name, \"caractere \" + JSON.stringify(ch)).to.include(ch);\n  });\n});\n\npm.test(\"status 201\", () => pm.response.to.have.status(201));\n\npm.test(\"nome na resposta igual ao enviado\", () => {\n  pm.expect(body.name).to.eql(sent.name);\n});\n\npm.test(\"responde em menos de 500 ms\", () => {\n  pm.expect(pm.response.responseTime).to.be.below(500);\n});\n\n// Confere o que ficou gravado, caractere por caractere\npm.sendRequest(pm.environment.get(\"baseUrl\") + \"/specialties/\" + body.id, (err, res) => {\n  pm.test(\"nome gravado igual ao enviado\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(200);\n    pm.expect(res.json().name).to.eql(sent.name);\n  });\n});\n\n// Especialidade criada por este request, para apagar no fim do fluxo\npm.collectionVariables.set(\"specialCharsSpecialtyId\", body.id);\n"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Odontologia Estética & Cirurgia/Buco-maxilar\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/specialties",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "specialties"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -4581,6 +4618,35 @@
           ]
         },
         {
+          "name": "Limpeza: CT-API-SPECIALTIES-09",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/specialties/{{specialCharsSpecialtyId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "specialties",
+                "{{specialCharsSpecialtyId}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// URL já com o id real (ex.: http://localhost:9966/petclinic/api/specialties/4)\nconst url = pm.variables.replaceIn(pm.request.url.toString());\n\n// \"Já removido\" também é sucesso para uma limpeza\npm.test(\"especialidade apagada ou já removida (204 ou 404)\", () => {\n  pm.expect(pm.response.code).to.be.oneOf([204, 404]);\n});\n\n// Confere que a especialidade não existe mais\npm.sendRequest(url, (err, res) => {\n  pm.test(\"especialidade não existe mais (GET devolve 404)\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(404);\n  });\n});\n"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Limpeza: CT-API-OWNERS-03b",
           "event": [
             {
@@ -5248,6 +5314,10 @@
     },
     {
       "key": "vetSpecialtyLinksBefore",
+      "value": ""
+    },
+    {
+      "key": "specialCharsSpecialtyId",
       "value": ""
     }
   ]
