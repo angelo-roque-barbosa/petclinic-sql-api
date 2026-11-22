@@ -1,6 +1,6 @@
 # Casos de teste — petclinic-sql-api
 
-Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um por teste a automatizar, identificados pelo ID CT que vai no comentário acima do teste no código. Os arquivos de cada seção são os previstos em `tests/api/`; nenhum existe ainda. A exceção é a seção Postman, que já roda na coleção. Total: 94 casos.
+Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um por teste a automatizar, identificados pelo ID CT que vai no comentário acima do teste no código. Os arquivos de cada seção são os previstos em `tests/api/`; nenhum existe ainda. A exceção é a seção Postman, que já roda na coleção. Total: 95 casos.
 
 **Notas gerais**
 
@@ -40,7 +40,8 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | Bugs conhecidos | [tests/api/known_bugs/test_visit_date.py](#testsapiknown_bugstest_visit_datepy) | 2 |
 | Bugs conhecidos | [tests/api/known_bugs/test_pet_type_name.py](#testsapiknown_bugstest_pet_type_namepy) | 1 |
 | Bugs conhecidos | [tests/api/known_bugs/test_specialty_name.py](#testsapiknown_bugstest_specialty_namepy) | 1 |
-| **Total** | | **94** |
+| Bugs conhecidos | [tests/api/known_bugs/test_specialty_delete.py](#testsapiknown_bugstest_specialty_deletepy) | 1 |
+| **Total** | | **95** |
 
 ## API
 
@@ -893,7 +894,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Enviar DELETE /api/specialties/{id}.<br>2. Verificar a resposta.<br>3. Conferir no banco a especialidade e a ligação em `vet_specialties`. |
 | **Resultado esperado** | Passo 2: status 4xx (409).<br>Passo 3: a especialidade e a ligação continuam no banco. |
 | **Status** | Não executado |
-| **Observações** | Dicionário: a chave `vet_specialties_specialty_id_fkey` recusa no banco.<br>Regra a confirmar: a alternativa é remover a ligação junto. Em qualquer regra, nunca 500 e nunca remoção parcial. |
+| **Observações** | Dicionário: a chave `vet_specialties_specialty_id_fkey` recusa no banco.<br>Regra adotada em 2026-11-22: especialidade em uso não pode ser apagada, que é o que a API já faz na prática. Em 2026-11-22, nada foi apagado e não houve 500 nem remoção parcial, mas a resposta foi 404, como se a especialidade não existisse: é o BUG-16 (CT-BUG-16-01). Como a verificação do status falharia, o caso não entra na coleção do Postman. |
 
 #### CT-API-SPECIALTIES-09 — Nome com os caracteres que o pattern permite
 
@@ -1529,3 +1530,22 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Resultado obtido** | Passo 3: status 201 nos POST e 204 no PUT. Passo 4: mais de uma especialidade com o mesmo nome para uma pessoa (BUGS.md). |
 | **Status** | Não executado |
 | **Observações** | Reproduzido do zero em 2026-11-22. Um caso parametrizado por pedido (`pytest.mark.parametrize`). Depende de `radiology` e `surgery` do `populateDB.sql`, para provar que o seed também é protegido. Teardown: especialidades criadas; cada remoção aceita "já removido". |
+
+### tests/api/known_bugs/test_specialty_delete.py
+
+#### CT-BUG-16-01 — [BUG-16] Apagar especialidade em uso responde 409 e não apaga nada
+
+| Campo | Descrição |
+|---|---|
+| **Módulo / Área** | Bugs conhecidos › API › Especialidades › Exclusão |
+| **Tipo de teste** | Funcional – regra de negócio |
+| **Prioridade** | Média |
+| **Bug relacionado** | BUG-16 |
+| **Objetivo** | Garantir que apagar uma especialidade em uso é recusado com um status que diga o motivo, sem apagar nada. |
+| **Pré-condições** | Especialidade e veterinário com essa especialidade, criados via API. |
+| **Dados de teste** | Id da especialidade em uso. |
+| **Passos** | 1. Contar as linhas de `specialties`, `vets` e `vet_specialties`.<br>2. Enviar DELETE /api/specialties/{id}.<br>3. Verificar a resposta.<br>4. Conferir que a especialidade existe e contar de novo. |
+| **Resultado esperado** | Passo 3: status 409 (ou 400), sem nome de exceção Java no corpo.<br>Passo 4: a especialidade existe e as contagens são as do passo 1. |
+| **Resultado obtido** | Passo 3: status 404 com `DataIntegrityViolationException`. Passo 4: a especialidade existe e as contagens não mudaram (BUGS.md). |
+| **Status** | Não executado |
+| **Observações** | Reproduzido do zero em 2026-11-22. A parte do passo 4 passa hoje; o que falha é o status. Teardown: veterinário, depois a especialidade; cada remoção aceita "já removido". |

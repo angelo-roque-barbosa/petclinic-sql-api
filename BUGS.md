@@ -6,7 +6,7 @@ detalhes de cada um: passos, esperado, obtido, evidência no banco e, quando con
 Ambiente: `springcommunity/spring-petclinic-rest:latest` (4.0.2) com `postgres:16.3`, via `docker compose`. Todos
 reproduzidos do zero (`docker compose down -v` e `up -d --wait`). BUG-01, BUG-02 e BUG-03 foram reproduzidos de novo
 em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`); o BUG-04 foi reproduzido nela em
-2026-11-17, o BUG-05, o BUG-06, o BUG-07, o BUG-08 e o BUG-09, em 2026-11-18, o BUG-10, em 2026-11-19, o BUG-11 e o BUG-12, em 2026-11-20, o BUG-13 e o BUG-14, em 2026-11-21, e o BUG-15, em 2026-11-22.
+2026-11-17, o BUG-05, o BUG-06, o BUG-07, o BUG-08 e o BUG-09, em 2026-11-18, o BUG-10, em 2026-11-19, o BUG-11 e o BUG-12, em 2026-11-20, o BUG-13 e o BUG-14, em 2026-11-21, e o BUG-15 e o BUG-16, em 2026-11-22.
 
 | Bug | Resumo | Impacto | Issue |
 |:---|:---|:---|:---|
@@ -25,6 +25,7 @@ em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`)
 | [BUG-13](#bug-13--data-enviada-como-número-é-aceita-e-gravada-como-outra-data) | Data enviada como número é aceita e gravada como outra data | baixo a médio | [#13](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/13) |
 | [BUG-14](#bug-14--tipo-de-pet-com-nome-repetido-é-aceito) | Tipo de pet com nome repetido é aceito, inclusive com outra caixa ou espaço no fim e ao renomear | baixo a médio | [#14](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/14) |
 | [BUG-15](#bug-15--especialidade-com-nome-repetido-é-aceita) | Especialidade com nome repetido é aceita, inclusive com outra caixa, espaço no fim e ao renomear | baixo a médio | [#15](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/15) |
+| [BUG-16](#bug-16--apagar-especialidade-em-uso-responde-404-como-se-ela-não-existisse) | Apagar especialidade em uso responde 404, como se ela não existisse | baixo a médio | [#16](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/16) |
 
 ## BUG-01 · API responde 500 em vez de 400 quando o id do dono não é numérico
 
@@ -493,6 +494,38 @@ em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`)
 - **Impacto:** baixo a médio. Uma especialidade é um item de catálogo: com duas `surgery`, os veterinários cirurgiões
   ficam divididos entre dois ids, a lista de especialidades mostra nomes repetidos e uma busca de veterinários por
   especialidade sai incompleta.
+
+## BUG-16 · Apagar especialidade em uso responde 404, como se ela não existisse
+
+- **Issue:** [#16](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/16)
+- **Passos:** `docker compose down -v` → `up -d --wait` → criar a especialidade `Neurologia` → criar uma veterinária com
+  as especialidades `Neurologia` e `radiology` → contar as linhas de `specialties`, `vets` e `vet_specialties` →
+  `DELETE /api/specialties/{neurologia}` → `GET` da especialidade e da veterinária → contar de novo.
+- **Esperado:** `409 Conflict` (ou `400`, que está no contrato), dizendo que a especialidade está em uso, e nada
+  apagado. Regra adotada em 2026-11-22: especialidade em uso não pode ser apagada.
+- **Obtido:** `404`, com `"title": "DataIntegrityViolationException"` e `"detail": "The requested resource could not
+  be processed due to a data constraint violation"`. A especialidade continua existindo: o `GET` logo depois responde
+  `200`. A veterinária e as duas ligações dela também continuam. O mesmo acontece com `radiology` do seed
+  (`DELETE /api/specialties/1` → `404`, `GET` → `200`).
+
+  | Depois do `DELETE` | Resultado |
+  |:---|:---|
+  | `GET /api/specialties/{neurologia}` | `200`, a especialidade existe |
+  | `GET /api/vets/{ana}` | `200`, com `Neurologia` e `radiology` |
+  | `specialties`, `vets` e `vet_specialties` | 4, 7 e 7 linhas, como antes do `DELETE` |
+
+- **Evidência no banco:** as contagens antes e depois do `DELETE` (4, 7 e 7) e as ligações da veterinária (1 e 4). O
+  log mostra `update or delete on table "specialties" violates foreign key constraint
+  "vet_specialties_specialty_id_fkey"`. Depois da limpeza, 3, 6 e 5. Reproduzido do zero em 2026-11-22, na imagem
+  `4.0.2` (digest `sha256:daba846d…`).
+- **Causa provável:** a API tenta apagar a especialidade sem conferir se ela está em uso; a chave estrangeira do
+  banco recusa, e o tratamento de violação de integridade da API devolve `404` para qualquer caso, inclusive este,
+  em que o recurso existe. É o mesmo tratamento da OBS-02, mas lá o recurso realmente não existia.
+- **Impacto:** baixo a médio. Nenhum dado se perde, porque o banco protege. Mas quem chama a API recebe "não
+  encontrado" para algo que existe e não sabe que o motivo é a especialidade estar em uso; a resposta ainda expõe o
+  nome da exceção. É o mesmo tipo de status errado do BUG-05.
+- **Contraste:** apagar um tipo de pet em uso apaga tudo junto (BUG-07); apagar uma especialidade em uso é recusado.
+  As duas operações seguem regras opostas para situações parecidas.
 
 ## Observações
 
