@@ -680,7 +680,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Contar as linhas de `types`.<br>2. Para cada corpo, enviar POST /api/pettypes.<br>3. Verificar cada resposta e contar de novo. |
 | **Resultado esperado** | Status 400 em todos e mesma contagem. |
 | **Status** | Não executado |
-| **Observações** | Dicionário: o banco aceita NULL e `''`.<br>Em 2026-11-21, os quatro corpos responderam 400 apontando só o campo `name`, e nenhum tipo foi gravado: quem recusa é a validação da API (`@NotNull`, tamanho de 1 a 80 e o `pattern` do contrato, que exige uma letra no início). Na coleção do Postman: `CT-API-PET-TYPES-02a` a `02d`, um por corpo, na pasta Pets, logo depois do `CT-API-PET-TYPES-01`.<br>Espaço no fim é aceito: `'gato '` foi gravado com o espaço, porque o `pattern` permite espaço depois da primeira letra. Ao lado de `gato`, isso é nome repetido: entrou no BUG-14 (CT-API-PET-TYPES-05). |
+| **Observações** | Dicionário: o banco aceita NULL e `''`.<br>Em 2026-11-21, os quatro corpos responderam 400 apontando só o campo `name`, e nenhum tipo foi gravado: quem recusa é a validação da API (`@NotNull`, tamanho de 1 a 80 e o `pattern` do contrato, que exige uma letra no início). Na coleção do Postman: `CT-API-PET-TYPES-02a` a `02d`, um por corpo, na pasta Pettypes, logo depois do `CT-API-PET-TYPES-01`.<br>Espaço no fim é aceito: `'gato '` foi gravado com o espaço, porque o `pattern` permite espaço depois da primeira letra. Ao lado de `gato`, isso é nome repetido: entrou no BUG-14 (CT-API-PET-TYPES-05). |
 
 #### CT-API-PET-TYPES-03 — Nome do tipo no limite de 80 caracteres
 
@@ -694,7 +694,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Para cada tamanho, enviar POST /api/pettypes.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | 80: status 2xx e nome gravado com 80 caracteres.<br>81: status 400 e nenhum tipo novo. |
 | **Status** | Não executado |
-| **Observações** | Em 2026-11-21, 80 caracteres responderam 201 e foram gravados inteiros; 81 responderam 400 apontando o campo `name`, sem gravar nada. O limite conta caracteres, não bytes: 80 letras acentuadas (160 bytes) também foram aceitas. Na coleção do Postman: `CT-API-PET-TYPES-03a` (80) e `03b` (81), na pasta Pets. |
+| **Observações** | Em 2026-11-21, 80 caracteres responderam 201 e foram gravados inteiros; 81 responderam 400 apontando o campo `name`, sem gravar nada. O limite conta caracteres, não bytes: 80 letras acentuadas (160 bytes) também foram aceitas. Na coleção do Postman: `CT-API-PET-TYPES-03a` (80) e `03b` (81), na pasta Pettypes. |
 
 #### CT-API-PET-TYPES-04 — Tipo com nome já existente
 
@@ -1204,12 +1204,12 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Prioridade** | Alta |
 | **Objetivo** | Garantir que a coleção não deixa dados para trás, inclusive registros cujo id nenhuma limpeza conhece. |
 | **Pré-condições** | Ambiente no ar; coleção executada inteira e na ordem. |
-| **Dados de teste** | Totais de GET /api/owners, /api/pets, /api/pettypes e /api/visits. |
-| **Passos** | 1. `CT-API-INTEGRITY-01a` (pasta Início): guardar os quatro totais antes de qualquer outro request.<br>2. Executar os demais requests e as limpezas.<br>3. `CT-API-INTEGRITY-01b` (pasta Fim): ler os quatro totais de novo e comparar. |
-| **Resultado esperado** | Passo 1: as quatro leituras respondem 200 com uma lista.<br>Passo 3: cada total é igual ao do passo 1. |
+| **Dados de teste** | Totais de GET /api/owners, /api/pets, /api/pettypes, /api/visits, /api/specialties e /api/vets (os dois últimos desde 2026-11-22). |
+| **Passos** | 1. `CT-API-INTEGRITY-01a` (pasta Início): guardar os seis totais antes de qualquer outro request.<br>2. Executar os demais requests e as limpezas.<br>3. `CT-API-INTEGRITY-01b` (pasta Fim): ler os seis totais de novo e comparar. |
+| **Resultado esperado** | Passo 1: as seis leituras respondem 200 com uma lista.<br>Passo 3: cada total é igual ao do passo 1. |
 | **Resultado obtido** | Os quatro totais iguais aos do início, com 68 asserções e 0 falhas no Newman. |
 | **Status** | Passou em 2026-11-18 |
-| **Observações** | A leitura é feita pela API, porque o Postman não acessa o banco. A comparação pega linha sobrando ou faltando, mas não um registro alterado com o total igual, como no BUG-04. Falha simulada em cópias da coleção: sem a limpeza do dono do 03b (`owners` 11 em vez de 10), sem a limpeza do tipo (`pettypes` 7 em vez de 6), com os totais iniciais alterados e sem o request inicial. |
+| **Observações** | A leitura é feita pela API, porque o Postman não acessa o banco. A comparação pega linha sobrando ou faltando, mas não um registro alterado com o total igual, como no BUG-04. Falha simulada em cópias da coleção: sem a limpeza do dono do 03b (`owners` 11 em vez de 10), sem a limpeza do tipo (`pettypes` 7 em vez de 6), com os totais iniciais alterados e sem o request inicial. Em 2026-11-22, com specialties e vets incluídos: sem a limpeza da especialidade do CT-API-SPECIALTIES-01, `specialties` 4 em vez de 3; com a versão antiga, de quatro totais, a mesma sobra passava sem falha. |
 
 ## Bugs conhecidos
 
