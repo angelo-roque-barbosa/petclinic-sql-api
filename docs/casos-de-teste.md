@@ -739,6 +739,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Enviar PUT /api/pettypes/{id} com o novo nome.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | Status 2xx e a linha com o mesmo id tem o novo nome. |
 | **Status** | Não executado |
+| **Observações** | Em 2026-11-22, o PUT respondeu 204 e gravou o nome novo na mesma linha, sem criar outro tipo. O contrato exige `id` no corpo (`PetType`): sem ele, a resposta é 400. Com um `id` no corpo diferente do da URL, vale o da URL e o outro tipo não muda. Na coleção do Postman: `CT-API-PET-TYPES-06`, que cria o próprio tipo no Before request.<br>Renomear para um nome que já existe (`cat`) também responde 204 e deixa dois `cat`: a mesma regra do BUG-14, agora pelo PUT. |
 
 #### CT-API-PET-TYPES-07 — Apagar tipo sem pets
 

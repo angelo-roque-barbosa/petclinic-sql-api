@@ -1928,6 +1928,56 @@
           "response": []
         },
         {
+          "name": "CT-API-PET-TYPES-06",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Cria um tipo só para este teste e conta os tipos depois disso\nconst base = pm.environment.get(\"baseUrl\");\npm.collectionVariables.set(\"renamePetTypeOldName\", \"Coelho\");\n\npm.sendRequest({\n  url: base + \"/pettypes\",\n  method: \"POST\",\n  header: { \"Content-Type\": \"application/json\" },\n  body: { mode: \"raw\", raw: JSON.stringify({ name: pm.collectionVariables.get(\"renamePetTypeOldName\") }) }\n}, (err, res) => {\n  if (err) throw err;\n  if (res.code !== 201) throw new Error(\"Preparação falhou: POST do tipo devolveu \" + res.code);\n  pm.collectionVariables.set(\"renamePetTypeId\", res.json().id);\n  pm.sendRequest(base + \"/pettypes\", (listErr, listRes) => {\n    if (listErr) throw listErr;\n    pm.collectionVariables.set(\"petTypesCountBefore\", listRes.json().length);\n  });\n});\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.environment.get(\"baseUrl\");\nconst id = pm.collectionVariables.get(\"renamePetTypeId\");\nconst oldName = pm.collectionVariables.get(\"renamePetTypeOldName\");\nconst countBefore = Number(pm.collectionVariables.get(\"petTypesCountBefore\"));\nconst sent = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));\n\npm.test(\"nome enviado é diferente do atual\", () => {\n  pm.expect(sent.name).to.not.eql(oldName);\n});\n\npm.test(\"status 204\", () => pm.response.to.have.status(204));\n\npm.test(\"responde em menos de 500 ms\", () => {\n  pm.expect(pm.response.responseTime).to.be.below(500);\n});\n\n// O mesmo id passa a ter o nome novo\npm.sendRequest(base + \"/pettypes/\" + id, (err, res) => {\n  pm.test(\"tipo com o mesmo id tem o nome novo\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(200);\n    pm.expect(res.json().name).to.eql(sent.name);\n  });\n});\n\n// A atualização não pode criar outro tipo\npm.sendRequest(base + \"/pettypes\", (err, res) => {\n  pm.test(\"quantidade de tipos não mudou\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.json().length).to.eql(countBefore);\n  });\n});\n"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"id\": {{renamePetTypeId}},\n    \"name\": \"Lebre\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pettypes/{{renamePetTypeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pettypes",
+                "{{renamePetTypeId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "CT-API-PETS-01",
           "event": [
             {
@@ -3886,6 +3936,35 @@
           ]
         },
         {
+          "name": "Limpeza: CT-API-PET-TYPES-06",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/pettypes/{{renamePetTypeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "pettypes",
+                "{{renamePetTypeId}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// URL já com o id real (ex.: http://localhost:9966/petclinic/api/pettypes/18)\nconst url = pm.variables.replaceIn(pm.request.url.toString());\n\n// \"Já removido\" também é sucesso para uma limpeza\npm.test(\"tipo apagado ou já removido (204 ou 404)\", () => {\n  pm.expect(pm.response.code).to.be.oneOf([204, 404]);\n});\n\n// Confere que o tipo não existe mais\npm.sendRequest(url, (err, res) => {\n  pm.test(\"tipo não existe mais (GET devolve 404)\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(404);\n  });\n});\n"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Limpeza: CT-API-OWNERS-03b",
           "event": [
             {
@@ -4493,6 +4572,14 @@
     },
     {
       "key": "limitPetTypeId",
+      "value": ""
+    },
+    {
+      "key": "renamePetTypeId",
+      "value": ""
+    },
+    {
+      "key": "renamePetTypeOldName",
       "value": ""
     }
   ]
