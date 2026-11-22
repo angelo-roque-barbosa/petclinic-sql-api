@@ -1,6 +1,6 @@
 # Casos de teste — petclinic-sql-api
 
-Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um por teste a automatizar, identificados pelo ID CT que vai no comentário acima do teste no código. Os arquivos de cada seção são os previstos em `tests/api/`; nenhum existe ainda. A exceção é a seção Postman, que já roda na coleção. Total: 92 casos.
+Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um por teste a automatizar, identificados pelo ID CT que vai no comentário acima do teste no código. Os arquivos de cada seção são os previstos em `tests/api/`; nenhum existe ainda. A exceção é a seção Postman, que já roda na coleção. Total: 93 casos.
 
 **Notas gerais**
 
@@ -22,7 +22,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | API | [tests/api/test_pets.py](#testsapitest_petspy) | 13 |
 | API | [tests/api/test_visits.py](#testsapitest_visitspy) | 12 |
 | API | [tests/api/test_pet_types.py](#testsapitest_pet_typespy) | 8 |
-| API | [tests/api/test_specialties.py](#testsapitest_specialtiespy) | 8 |
+| API | [tests/api/test_specialties.py](#testsapitest_specialtiespy) | 9 |
 | API | [tests/api/test_vets.py](#testsapitest_vetspy) | 11 |
 | API | [tests/api/test_users.py](#testsapitest_userspy) | 9 |
 | Postman | [postman/petclinic.postman_collection.json](#postmanpetclinicpostman_collectionjson) | 1 |
@@ -39,7 +39,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | Bugs conhecidos | [tests/api/known_bugs/test_visit_description.py](#testsapiknown_bugstest_visit_descriptionpy) | 1 |
 | Bugs conhecidos | [tests/api/known_bugs/test_visit_date.py](#testsapiknown_bugstest_visit_datepy) | 2 |
 | Bugs conhecidos | [tests/api/known_bugs/test_pet_type_name.py](#testsapiknown_bugstest_pet_type_namepy) | 1 |
-| **Total** | | **92** |
+| **Total** | | **93** |
 
 ## API
 
@@ -891,6 +891,21 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Resultado esperado** | Passo 2: status 4xx (409).<br>Passo 3: a especialidade e a ligação continuam no banco. |
 | **Status** | Não executado |
 | **Observações** | Dicionário: a chave `vet_specialties_specialty_id_fkey` recusa no banco.<br>Regra a confirmar: a alternativa é remover a ligação junto. Em qualquer regra, nunca 500 e nunca remoção parcial. |
+
+#### CT-API-SPECIALTIES-09 — Nome com os caracteres que o pattern permite
+
+| Campo | Descrição |
+|---|---|
+| **Módulo / Área** | API › Especialidades › Criação |
+| **Tipo de teste** | Funcional – validação (partição de equivalência) |
+| **Prioridade** | Baixa |
+| **Objetivo** | Garantir que os caracteres permitidos pelo contrato são aceitos e gravados sem alteração. |
+| **Pré-condições** | Nenhuma. |
+| **Dados de teste** | name = `Odontologia Estética & Cirurgia/Buco-maxilar` (44 caracteres): letra acentuada, espaço, `&`, `/` e `-`, todos permitidos pelo `pattern` `^[\p{L}][\p{L}\s\-&/]{0,79}$`. |
+| **Passos** | 1. Enviar POST /api/specialties.<br>2. Verificar a resposta.<br>3. Buscar no banco a linha de `specialties` com o id devolvido. |
+| **Resultado esperado** | Passo 2: status 201 e name igual ao enviado.<br>Passo 3: name igual ao enviado, caractere por caractere. |
+| **Status** | Não executado |
+| **Observações** | Separado do CT-API-SPECIALTIES-03 de propósito: o 03 varia só o tamanho, este varia só os caracteres, com um tamanho comum, para que uma falha aponte a causa sem ambiguidade. Caracteres fora do `pattern` (dígito, `.`, `_`) são outra partição, ainda sem caso. Em 2026-11-22, numa sondagem, o valor foi aceito com 201 e gravado igual. |
 
 ### tests/api/test_vets.py
 
