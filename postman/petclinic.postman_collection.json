@@ -3815,6 +3815,56 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "CT-API-SPECIALTIES-06",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Cria uma especialidade só para este teste e conta as especialidades depois disso\nconst base = pm.environment.get(\"baseUrl\");\npm.collectionVariables.set(\"renameSpecialtyOldName\", \"Oncologia\");\n\npm.sendRequest({\n  url: base + \"/specialties\",\n  method: \"POST\",\n  header: { \"Content-Type\": \"application/json\" },\n  body: { mode: \"raw\", raw: JSON.stringify({ name: pm.collectionVariables.get(\"renameSpecialtyOldName\") }) }\n}, (err, res) => {\n  if (err) throw err;\n  if (res.code !== 201) throw new Error(\"Preparação falhou: POST da especialidade devolveu \" + res.code);\n  pm.collectionVariables.set(\"renameSpecialtyId\", res.json().id);\n  pm.sendRequest(base + \"/specialties\", (listErr, listRes) => {\n    if (listErr) throw listErr;\n    pm.collectionVariables.set(\"specialtiesCountBefore\", listRes.json().length);\n  });\n});\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.environment.get(\"baseUrl\");\nconst id = pm.collectionVariables.get(\"renameSpecialtyId\");\nconst oldName = pm.collectionVariables.get(\"renameSpecialtyOldName\");\nconst countBefore = Number(pm.collectionVariables.get(\"specialtiesCountBefore\"));\nconst sent = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));\n\npm.test(\"nome enviado é diferente do atual\", () => {\n  pm.expect(sent.name).to.not.eql(oldName);\n});\n\npm.test(\"status 204\", () => pm.response.to.have.status(204));\n\npm.test(\"responde em menos de 500 ms\", () => {\n  pm.expect(pm.response.responseTime).to.be.below(500);\n});\n\n// O mesmo id passa a ter o nome novo\npm.sendRequest(base + \"/specialties/\" + id, (err, res) => {\n  pm.test(\"especialidade com o mesmo id tem o nome novo\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(200);\n    pm.expect(res.json().name).to.eql(sent.name);\n  });\n});\n\n// A atualização não pode criar outra especialidade\npm.sendRequest(base + \"/specialties\", (err, res) => {\n  pm.test(\"quantidade de especialidades não mudou\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.json().length).to.eql(countBefore);\n  });\n});\n"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Dermatologia\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/specialties/{{renameSpecialtyId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "specialties",
+                "{{renameSpecialtyId}}"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -4418,6 +4468,35 @@
               "path": [
                 "specialties",
                 "{{limitSpecialtyId}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// URL já com o id real (ex.: http://localhost:9966/petclinic/api/specialties/4)\nconst url = pm.variables.replaceIn(pm.request.url.toString());\n\n// \"Já removido\" também é sucesso para uma limpeza\npm.test(\"especialidade apagada ou já removida (204 ou 404)\", () => {\n  pm.expect(pm.response.code).to.be.oneOf([204, 404]);\n});\n\n// Confere que a especialidade não existe mais\npm.sendRequest(url, (err, res) => {\n  pm.test(\"especialidade não existe mais (GET devolve 404)\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(404);\n  });\n});\n"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Limpeza: CT-API-SPECIALTIES-06",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/specialties/{{renameSpecialtyId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "specialties",
+                "{{renameSpecialtyId}}"
               ]
             }
           },
@@ -5078,6 +5157,14 @@
     },
     {
       "key": "limitSpecialtyId",
+      "value": ""
+    },
+    {
+      "key": "renameSpecialtyId",
+      "value": ""
+    },
+    {
+      "key": "renameSpecialtyOldName",
       "value": ""
     }
   ]

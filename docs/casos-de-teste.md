@@ -863,6 +863,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Enviar PUT /api/specialties/{id} com o novo nome.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | Status 2xx e a linha com o mesmo id tem o novo nome. |
 | **Status** | Não executado |
+| **Observações** | Em 2026-11-22, o PUT respondeu 204 e gravou o nome novo na mesma linha, sem criar outra especialidade. Ao contrário do PUT de tipo, o `id` não é exigido no corpo: o contrato o marca como `readOnly` em `Specialty`. Com um `id` diferente no corpo, vale o da URL. Na coleção do Postman: `CT-API-SPECIALTIES-06`, que cria a própria especialidade no Before request. Renomear para um nome que já existe também é aceito: está no BUG-15. |
 
 #### CT-API-SPECIALTIES-07 — Apagar especialidade sem veterinários
 
