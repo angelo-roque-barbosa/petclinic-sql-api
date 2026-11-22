@@ -6,7 +6,7 @@ detalhes de cada um: passos, esperado, obtido, evidência no banco e, quando con
 Ambiente: `springcommunity/spring-petclinic-rest:latest` (4.0.2) com `postgres:16.3`, via `docker compose`. Todos
 reproduzidos do zero (`docker compose down -v` e `up -d --wait`). BUG-01, BUG-02 e BUG-03 foram reproduzidos de novo
 em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`); o BUG-04 foi reproduzido nela em
-2026-11-17, o BUG-05, o BUG-06, o BUG-07, o BUG-08 e o BUG-09, em 2026-11-18, o BUG-10, em 2026-11-19, o BUG-11 e o BUG-12, em 2026-11-20, e o BUG-13 e o BUG-14, em 2026-11-21.
+2026-11-17, o BUG-05, o BUG-06, o BUG-07, o BUG-08 e o BUG-09, em 2026-11-18, o BUG-10, em 2026-11-19, o BUG-11 e o BUG-12, em 2026-11-20, o BUG-13 e o BUG-14, em 2026-11-21, e o BUG-15, em 2026-11-22.
 
 | Bug | Resumo | Impacto | Issue |
 |:---|:---|:---|:---|
@@ -24,6 +24,7 @@ em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`)
 | [BUG-12](#bug-12--visita-com-data-anterior-ao-nascimento-do-pet-é-aceita) | Visita com data anterior ao nascimento do pet é aceita | baixo a médio | [#12](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/12) |
 | [BUG-13](#bug-13--data-enviada-como-número-é-aceita-e-gravada-como-outra-data) | Data enviada como número é aceita e gravada como outra data | baixo a médio | [#13](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/13) |
 | [BUG-14](#bug-14--tipo-de-pet-com-nome-repetido-é-aceito) | Tipo de pet com nome repetido é aceito, inclusive com outra caixa ou espaço no fim e ao renomear | baixo a médio | [#14](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/14) |
+| [BUG-15](#bug-15--especialidade-com-nome-repetido-é-aceita) | Especialidade com nome repetido é aceita, inclusive com outra caixa, espaço no fim e ao renomear | baixo a médio | [#15](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/15) |
 
 ## BUG-01 · API responde 500 em vez de 400 quando o id do dono não é numérico
 
@@ -461,6 +462,37 @@ em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`)
   O banco ficou com quatro tipos que são o mesmo para uma pessoa em cada grupo: `cat`, `Cat`, `CAT` e `cat `;
   `furão`, `Furão`, `FURÃO` e `furão `. `types` passou de 6 para 13 linhas e voltou a 6 depois da limpeza.
   Reproduzido do zero em 2026-11-21.
+
+## BUG-15 · Especialidade com nome repetido é aceita
+
+- **Issue:** [#15](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/15)
+- **Defeito irmão:** o BUG-14, o mesmo problema nos tipos de pet. Fica num registro separado porque é outro recurso,
+  outro endpoint e outro código; a correção e a verificação de um não garantem as do outro.
+- **Passos:** `docker compose down -v` → `up -d --wait` → contar as linhas de `specialties` → `POST /api/specialties`
+  com `radiology` (já existe no seed), `Radiology` e `radiology ` (espaço no fim) → `POST /api/specialties` com
+  `cardiologia` duas vezes → criar `Oncologia` e renomeá-la com `PUT /api/specialties/{id}` para `surgery` (já existe
+  no seed) → `GET /api/specialties` → conferir no banco os nomes repetidos.
+- **Esperado:** `400` (ou `409`, que não está no contrato) em todos os pedidos que repetem um nome, sem gravar nada.
+  A regra é a mesma do BUG-14: não pode haver duas especialidades com o mesmo nome, comparado sem diferenciar
+  maiúsculas e sem os espaços das pontas.
+- **Obtido:** `201` em todos os `POST` e `204` no `PUT`. `specialties` passa de 3 para 9 linhas:
+
+  | Nome para uma pessoa | Quantas | Grafias gravadas | Ids |
+  |:---|:---:|:---|:---|
+  | radiology | 4 | `radiology`, `radiology`, `Radiology`, `radiology ` | 1 (seed), 4, 5, 6 |
+  | cardiologia | 2 | `cardiologia`, `cardiologia` | 7, 8 |
+  | surgery | 2 | `surgery`, `surgery` (a segunda pelo `PUT`) | 2 (seed), 9 |
+
+  `GET /api/specialties` → `radiology, surgery, dentistry, radiology, Radiology, radiology , cardiologia,
+  cardiologia, surgery`.
+- **Evidência no banco:** a contagem de `specialties` (3 antes, 9 depois e 3 depois da limpeza) e o agrupamento por
+  nome sem diferenciar maiúsculas e sem os espaços das pontas. O índice `specialties_name_idx` existe, mas não é
+  `UNIQUE`. Reproduzido do zero em 2026-11-22, na imagem `4.0.2` (digest `sha256:daba846d…`).
+- **Causa provável:** a API não confere se o nome já existe, nem no `POST` nem no `PUT`, e o banco não tem restrição
+  de unicidade no nome.
+- **Impacto:** baixo a médio. Uma especialidade é um item de catálogo: com duas `surgery`, os veterinários cirurgiões
+  ficam divididos entre dois ids, a lista de especialidades mostra nomes repetidos e uma busca de veterinários por
+  especialidade sai incompleta.
 
 ## Observações
 

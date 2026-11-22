@@ -108,7 +108,7 @@ O banco permite todos os casos acima; nos dados atuais só aparecem os pets anti
 
 ## Achados
 
-Catorze bugs e duas observações, todos reproduzidos do zero e com evidência no banco. Os detalhes (passos,
+Quinze bugs e duas observações, todos reproduzidos do zero e com evidência no banco. Os detalhes (passos,
 esperado, obtido, evidência e causa) estão em [BUGS.md](BUGS.md).
 
 | Bug | Resumo | Impacto | Issue |
@@ -127,6 +127,7 @@ esperado, obtido, evidência e causa) estão em [BUGS.md](BUGS.md).
 | BUG-12 | `POST` de visita aceita data anterior ao nascimento do pet | baixo a médio | [#12](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/12) |
 | BUG-13 | Data enviada como número é lida como dias desde 1970 e gravada: um timestamp vira visita no ano 4,9 milhões, com 201 | baixo a médio | [#13](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/13) |
 | BUG-14 | `POST /api/pettypes` aceita nome repetido, inclusive com outra caixa ou espaço no fim, e o `PUT` renomeia para um nome que já existe: o banco fica com `cat`, `Cat`, `CAT` e `cat ` | baixo a médio | [#14](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/14) |
+| BUG-15 | O mesmo do BUG-14 nas especialidades: `POST` e `PUT` aceitam nome repetido, inclusive com outra caixa ou espaço no fim | baixo a médio | [#15](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/15) |
 
 **OBS-01:** o contrato documenta 200 como sucesso em sete endpoints, mas a API devolve 201 ou 204 (o correto). Não
 é bug; fica para a validação de contrato da fase 5.

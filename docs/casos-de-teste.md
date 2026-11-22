@@ -1,6 +1,6 @@
 # Casos de teste — petclinic-sql-api
 
-Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um por teste a automatizar, identificados pelo ID CT que vai no comentário acima do teste no código. Os arquivos de cada seção são os previstos em `tests/api/`; nenhum existe ainda. A exceção é a seção Postman, que já roda na coleção. Total: 93 casos.
+Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um por teste a automatizar, identificados pelo ID CT que vai no comentário acima do teste no código. Os arquivos de cada seção são os previstos em `tests/api/`; nenhum existe ainda. A exceção é a seção Postman, que já roda na coleção. Total: 94 casos.
 
 **Notas gerais**
 
@@ -39,7 +39,8 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | Bugs conhecidos | [tests/api/known_bugs/test_visit_description.py](#testsapiknown_bugstest_visit_descriptionpy) | 1 |
 | Bugs conhecidos | [tests/api/known_bugs/test_visit_date.py](#testsapiknown_bugstest_visit_datepy) | 2 |
 | Bugs conhecidos | [tests/api/known_bugs/test_pet_type_name.py](#testsapiknown_bugstest_pet_type_namepy) | 1 |
-| **Total** | | **93** |
+| Bugs conhecidos | [tests/api/known_bugs/test_specialty_name.py](#testsapiknown_bugstest_specialty_namepy) | 1 |
+| **Total** | | **94** |
 
 ## API
 
@@ -803,7 +804,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Contar as linhas de `specialties`.<br>2. Para cada corpo, enviar POST /api/specialties.<br>3. Verificar cada resposta e contar de novo. |
 | **Resultado esperado** | Status 400 em todos e mesma contagem. |
 | **Status** | Não executado |
-| **Observações** | Dicionário: o banco aceita NULL e `''`.<br>Em 2026-11-22, os quatro corpos responderam 400 apontando só o campo `name`, e nenhuma especialidade foi gravada, como no CT-API-PET-TYPES-02. Na coleção do Postman: `CT-API-SPECIALTIES-02a` a `02d`, um por corpo, na pasta Specialties.<br>Espaço no fim é aceito: `'cirurgia '` foi gravado com o espaço, porque o `pattern` permite espaço depois da primeira letra. Fica para o CT-API-SPECIALTIES-04 (nome repetido). |
+| **Observações** | Dicionário: o banco aceita NULL e `''`.<br>Em 2026-11-22, os quatro corpos responderam 400 apontando só o campo `name`, e nenhuma especialidade foi gravada, como no CT-API-PET-TYPES-02. Na coleção do Postman: `CT-API-SPECIALTIES-02a` a `02d`, um por corpo, na pasta Specialties.<br>Espaço no fim é aceito: `'cirurgia '` foi gravado com o espaço, porque o `pattern` permite espaço depois da primeira letra. Ao lado de `cirurgia`, isso é nome repetido: entrou no BUG-15. |
 
 #### CT-API-SPECIALTIES-03 — Nome da especialidade no limite de 80 caracteres
 
@@ -832,7 +833,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Enviar POST /api/specialties com o nome repetido.<br>2. Verificar a resposta.<br>3. Contar no banco as especialidades com esse nome. |
 | **Resultado esperado** | Status 4xx (409) e uma especialidade com esse nome. |
 | **Status** | Não executado |
-| **Observações** | Dicionário: o banco aceita duas `surgery`.<br>Regra a confirmar. |
+| **Observações** | Dicionário: o banco aceita duas `surgery`.<br>Regra adotada em 2026-11-22, a mesma dos tipos de pet: não pode haver duas especialidades com o mesmo nome, comparado sem diferenciar maiúsculas e sem os espaços das pontas. Hoje o nome repetido é aceito com 201: é o BUG-15 (CT-BUG-15-01). Nenhum valor passa, então o caso não entra na coleção do Postman. |
 
 #### CT-API-SPECIALTIES-05 — Especialidade com o mesmo nome em maiúsculas diferentes
 
@@ -847,7 +848,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Enviar POST /api/specialties com o nome em outra caixa.<br>2. Verificar a resposta.<br>3. Contar no banco as especialidades com esse nome, sem diferenciar maiúsculas. |
 | **Resultado esperado** | Status 4xx (409) e uma especialidade. |
 | **Status** | Não executado |
-| **Observações** | Dicionário: o banco aceita `Surgery` ao lado de `surgery`.<br>Regra a confirmar. |
+| **Observações** | Dicionário: o banco aceita `Surgery` ao lado de `surgery`.<br>Regra adotada em 2026-11-22: a comparação não diferencia maiúsculas nem considera os espaços das pontas. `Radiology` e `radiology ` foram aceitos ao lado de `radiology`: está no BUG-15 (CT-BUG-15-01). O caso não entra na coleção do Postman. |
 
 #### CT-API-SPECIALTIES-06 — Atualizar nome da especialidade
 
@@ -1507,3 +1508,22 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Resultado obtido** | Passo 3: status 201 nos POST e 204 no PUT. Passo 4: mais de um tipo com o mesmo nome para uma pessoa (BUGS.md). |
 | **Status** | Não executado |
 | **Observações** | Reproduzido do zero em 2026-11-21, também com outra caixa e espaço no fim; o PUT, em 2026-11-22. Um caso parametrizado por nome (`pytest.mark.parametrize`). Depende do tipo `cat` do `populateDB.sql`, para provar que o seed também é protegido. Teardown: tipos criados; cada remoção aceita "já removido". |
+
+### tests/api/known_bugs/test_specialty_name.py
+
+#### CT-BUG-15-01 — [BUG-15] Especialidade com nome repetido é recusada
+
+| Campo | Descrição |
+|---|---|
+| **Módulo / Área** | Bugs conhecidos › API › Especialidades |
+| **Tipo de teste** | Funcional – regra de negócio |
+| **Prioridade** | Média |
+| **Bug relacionado** | BUG-15 |
+| **Objetivo** | Garantir que a API não grava duas especialidades com o mesmo nome, nem ao criar nem ao renomear. |
+| **Pré-condições** | Especialidade com nome único criada via API; outra especialidade própria para o rename. |
+| **Dados de teste** | POST com o mesmo nome da criada, com `radiology` (seed, id 1), `Radiology` e `radiology `; PUT da especialidade própria renomeando para `surgery` (seed, id 2). |
+| **Passos** | 1. Contar no banco as especialidades com cada nome, sem diferenciar maiúsculas e sem os espaços das pontas.<br>2. Enviar cada pedido.<br>3. Verificar cada resposta.<br>4. Contar de novo. |
+| **Resultado esperado** | Passo 3: status 400 (ou 409) apontando o campo `name`.<br>Passo 4: uma especialidade com cada nome. |
+| **Resultado obtido** | Passo 3: status 201 nos POST e 204 no PUT. Passo 4: mais de uma especialidade com o mesmo nome para uma pessoa (BUGS.md). |
+| **Status** | Não executado |
+| **Observações** | Reproduzido do zero em 2026-11-22. Um caso parametrizado por pedido (`pytest.mark.parametrize`). Depende de `radiology` e `surgery` do `populateDB.sql`, para provar que o seed também é protegido. Teardown: especialidades criadas; cada remoção aceita "já removido". |
