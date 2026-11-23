@@ -4545,6 +4545,44 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "CT-API-VETS-09",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vets/{{deleteVetId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vets",
+                "{{deleteVetId}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Cria dois veterinários sem especialidade: o que será apagado e outro, que tem\n// de continuar; depois conta os veterinários e as ligações veterinário-especialidade\nconst base = pm.environment.get(\"baseUrl\");\n\nfunction post(data, next) {\n  pm.sendRequest({\n    url: base + \"/vets\",\n    method: \"POST\",\n    header: { \"Content-Type\": \"application/json\" },\n    body: { mode: \"raw\", raw: JSON.stringify(data) }\n  }, (err, res) => {\n    if (err) throw err;\n    if (res.code !== 201) throw new Error(\"Preparação falhou: POST do veterinário devolveu \" + res.code);\n    next(res.json());\n  });\n}\n\npost({ firstName: \"Igor\", lastName: \"Alves\", specialties: [] }, (target) => {\n  pm.collectionVariables.set(\"deleteVetId\", target.id);\n  post({ firstName: \"Joana\", lastName: \"Ramos\", specialties: [] }, (kept) => {\n    pm.collectionVariables.set(\"keptVetId\", kept.id);\n    pm.collectionVariables.set(\"keptVetFirstName\", kept.firstName);\n    pm.sendRequest(base + \"/vets\", (err, res) => {\n      if (err) throw err;\n      pm.collectionVariables.set(\"vetsCountBefore\", res.json().length);\n      pm.collectionVariables.set(\"vetSpecialtyLinksBefore\", res.json().reduce((sum, v) => sum + v.specialties.length, 0));\n    });\n  });\n});\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.environment.get(\"baseUrl\");\nconst deletedId = pm.collectionVariables.get(\"deleteVetId\");\nconst keptId = pm.collectionVariables.get(\"keptVetId\");\nconst keptFirstName = pm.collectionVariables.get(\"keptVetFirstName\");\nconst vetsBefore = Number(pm.collectionVariables.get(\"vetsCountBefore\"));\nconst linksBefore = Number(pm.collectionVariables.get(\"vetSpecialtyLinksBefore\"));\n\npm.test(\"status 204\", () => pm.response.to.have.status(204));\n\npm.test(\"responde em menos de 500 ms\", () => {\n  pm.expect(pm.response.responseTime).to.be.below(500);\n});\n\n// O veterinário apagado não pode mais ser encontrado\npm.sendRequest(base + \"/vets/\" + deletedId, (err, res) => {\n  pm.test(\"veterinário apagado não existe mais (GET devolve 404)\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(404);\n  });\n});\n\n// Saiu exatamente um veterinário, e nenhuma ligação de outro\npm.sendRequest(base + \"/vets\", (err, res) => {\n  pm.test(\"um veterinário a menos no total\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.json().length).to.eql(vetsBefore - 1);\n  });\n  pm.test(\"ligações veterinário-especialidade não mudaram\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.json().reduce((sum, v) => sum + v.specialties.length, 0)).to.eql(linksBefore);\n  });\n});\n\n// O outro veterinário continua, com o mesmo nome\npm.sendRequest(base + \"/vets/\" + keptId, (err, res) => {\n  pm.test(\"o outro veterinário continua, com o mesmo nome\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(200);\n    pm.expect(res.json().firstName).to.eql(keptFirstName);\n  });\n});\n"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -5422,6 +5460,35 @@
           ]
         },
         {
+          "name": "Limpeza: CT-API-VETS-09",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vets/{{keptVetId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vets",
+                "{{keptVetId}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Apaga o veterinário que ficou (na URL) e, se ainda existir, o do teste\nconst base = pm.environment.get(\"baseUrl\");\nconst url = pm.variables.replaceIn(pm.request.url.toString());\nconst deletedUrl = base + \"/vets/\" + pm.collectionVariables.get(\"deleteVetId\");\n\n// \"Já removido\" também é sucesso para uma limpeza\npm.test(\"veterinário mantido apagado ou já removido (204 ou 404)\", () => {\n  pm.expect(pm.response.code).to.be.oneOf([204, 404]);\n});\n\npm.sendRequest(url, (err, res) => {\n  pm.test(\"veterinário mantido não existe mais (GET devolve 404)\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(404);\n  });\n\n  // Numa execução normal, o veterinário do teste já saiu (404)\n  pm.sendRequest({ url: deletedUrl, method: \"DELETE\" }, (delErr, delRes) => {\n    pm.test(\"veterinário do teste apagado ou já removido (204 ou 404)\", () => {\n      pm.expect(delErr).to.be.null;\n      pm.expect(delRes.code).to.be.oneOf([204, 404]);\n    });\n\n    pm.sendRequest(deletedUrl, (getErr, getRes) => {\n      pm.test(\"veterinário do teste não existe mais (GET devolve 404)\", () => {\n        pm.expect(getErr).to.be.null;\n        pm.expect(getRes.code).to.eql(404);\n      });\n    });\n  });\n});\n"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Limpeza: CT-API-OWNERS-03b",
           "event": [
             {
@@ -6189,6 +6256,18 @@
     },
     {
       "key": "renameVetSpecialtyName",
+      "value": ""
+    },
+    {
+      "key": "deleteVetId",
+      "value": ""
+    },
+    {
+      "key": "keptVetId",
+      "value": ""
+    },
+    {
+      "key": "keptVetFirstName",
       "value": ""
     }
   ]

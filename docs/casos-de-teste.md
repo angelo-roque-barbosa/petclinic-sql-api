@@ -1050,6 +1050,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Enviar DELETE /api/vets/{id}.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | Status 2xx e nenhuma linha de `vets` com esse id. |
 | **Status** | Não executado |
+| **Observações** | Em 2026-11-23, a API respondeu 204, o veterinário sumiu e um segundo DELETE respondeu 404. Na coleção do Postman: `CT-API-VETS-09`, que cria dois veterinários sem especialidade e apaga só um; o outro é o controle. Também confere que o total de veterinários caiu em um e que o total de ligações veterinário-especialidade não mudou. |
 
 #### CT-API-VETS-10 — Apagar veterinário com especialidade
 
