@@ -293,6 +293,16 @@ def owner_with_pet(db, prepared_owner, prepared_pet_type):
 
 
 @pytest.fixture
+def visits_to_delete(db, owner_with_pet):
+    """Lista de ids de visitas criadas pela API no teste. No fim, cada uma é apagada por SQL; apagar zero
+    linhas também serve. Depende da owner_with_pet para o pytest apagar as visitas antes do pet."""
+    ids = []
+    yield ids
+    for visit_id in ids:
+        db.execute(DELETE_VISIT, (visit_id,))
+
+
+@pytest.fixture
 def owner_with_pet_and_visit(db, owner_with_pet):
     """Acrescenta ao pet da fixture owner_with_pet uma visita gravada direto no banco, e entrega os ids.
 

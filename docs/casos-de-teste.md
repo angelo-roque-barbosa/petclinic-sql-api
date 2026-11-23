@@ -481,7 +481,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – positivo |
 | **Prioridade** | Alta |
 | **Objetivo** | Garantir que a visita é gravada com a data e a descrição enviadas, ligada ao pet certo. |
-| **Pré-condições** | Dono, tipo e pet criados via API. |
+| **Pré-condições** | Dono, tipo e pet gravados por SQL na fixture `owner_with_pet` (tests/conftest.py); a visita criada pela API é apagada pela `visits_to_delete`. |
 | **Dados de teste** | Visita padrão: date entre o nascimento do pet e hoje, description com sufixo único. |
 | **Passos** | 1. Enviar POST /api/owners/{ownerId}/pets/{petId}/visits.<br>2. Verificar a resposta.<br>3. Buscar no banco a linha de `visits` com o id devolvido. |
 | **Resultado esperado** | Passo 2: status 201.<br>Passo 3: pet_id = id do pet; visit_date e description iguais aos enviados. |
