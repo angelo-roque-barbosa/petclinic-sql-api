@@ -133,6 +133,10 @@ execução; quando difere do esperado, a linha aponta o bug.
 | `telephone` (POST /api/owners) | 10 caracteres, com letras | `60855510ab` | 400, nada gravado | 400, nada gravado |
 | `telephone` (POST /api/owners) | 10 caracteres, com espaços | `608 555 10` | 400, nada gravado | 400, nada gravado |
 | `telephone` (POST /api/owners) | vazio (o `NOT NULL` do banco não barra) | `''` | 400, nada gravado | 400, nada gravado |
+| `firstName` (POST /api/owners) | vazio | `''` | 400, nada gravado | 400, nada gravado |
+| `firstName` (POST /api/owners) | só espaços (o banco aceita) | `'   '` | 400, nada gravado | 400, nada gravado |
+| `lastName` (POST /api/owners) | vazio | `''` | 400, nada gravado | 400, nada gravado |
+| `lastName` (POST /api/owners) | só espaços (o banco aceita) | `'   '` | 400, nada gravado | 400, nada gravado |
 
 ## Achados
 

@@ -158,3 +158,38 @@ def test_criar_dono_com_telefone_fora_do_formato_e_recusado_sem_gravar(api, db, 
     # Verificar o banco: nenhum dono novo
     count_after = db.execute(COUNT_OWNERS).fetchone()[0]
     assert count_after == count_before, f"o total de donos deveria continuar {count_before}, ficou {count_after}"
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        pytest.param("firstName", "", id="firstName-vazio"),
+        pytest.param("firstName", "   ", id="firstName-so-espacos"),
+        pytest.param("lastName", "", id="lastName-vazio"),
+        pytest.param("lastName", "   ", id="lastName-so-espacos"),
+    ],
+)
+def test_criar_dono_com_nome_sem_conteudo_e_recusado_sem_gravar(api, db, owners_to_delete, field, value):
+    """CT-API-OWNERS-05: nome ou sobrenome vazio ou só com espaços responde 400 apontando o campo e não grava dono."""
+    # Preparar: o dono padrão com o campo sem conteúdo, e o total de donos antes
+    payload = {**OWNER, field: value}
+    assert value.strip() == "", "o valor do teste deveria estar vazio ou ter só espaços"
+    count_before = db.execute(COUNT_OWNERS).fetchone()[0]
+
+    # Agir
+    response = api.post("/owners", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        owners_to_delete.append(body["id"])
+
+    # Verificar a resposta: 400, e o erro aponta só o campo alterado
+    assert response.status_code == 400, f"POST /owners com {field}={value!r} deveria responder 400, respondeu {response.status_code}"
+    errors = body.get("schemaValidationErrors") or []
+    assert errors, "a resposta deveria listar os erros de validação"
+    assert {error["field"] for error in errors} == {field}, (
+        f"o erro deveria apontar só {field}, apontou {sorted({error['field'] for error in errors})}"
+    )
+
+    # Verificar o banco: nenhum dono novo
+    count_after = db.execute(COUNT_OWNERS).fetchone()[0]
+    assert count_after == count_before, f"o total de donos deveria continuar {count_before}, ficou {count_after}"
