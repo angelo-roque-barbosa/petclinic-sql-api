@@ -459,7 +459,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – regra de negócio |
 | **Prioridade** | Alta |
 | **Objetivo** | Garantir que apagar um pet remove junto as visitas dele, sem deixar remoção pela metade nem afetar outros registros. |
-| **Pré-condições** | Dono e tipo criados via API; um pet com duas visitas e outro pet do mesmo dono com uma visita. |
+| **Pré-condições** | Dono e tipo; um pet com duas visitas e outro pet do mesmo dono com uma visita; tudo gravado por SQL nas fixtures `owner_with_pet_and_visit` (tests/conftest.py) e `pet_with_two_visits_and_sibling` (tests/api/test_pets.py). |
 | **Dados de teste** | Id do pet com duas visitas. |
 | **Passos** | 1. Guardar os totais de pets e visitas.<br>2. Enviar DELETE /api/pets/{petId}.<br>3. Verificar a resposta.<br>4. Conferir no banco o pet, as visitas dele, os totais, o outro pet com a visita dele, o dono e o tipo. |
 | **Resultado esperado** | Passo 3: status 204.<br>Passo 4: o pet e as duas visitas dele não existem mais; `pets` tem uma linha a menos e `visits` tem duas a menos; o outro pet, a visita dele, o dono e o tipo continuam. |

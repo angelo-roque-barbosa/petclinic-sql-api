@@ -127,6 +127,19 @@ SELECT_MAX_OWNER_ID = """
 SELECT MAX(id) FROM owners;
 """
 
+# Pergunta: quantas linhas existem hoje na tabela `visits`?
+# Devolve uma linha só, com um único valor: o total de visitas.
+COUNT_VISITS = """
+SELECT COUNT(*) FROM visits;
+"""
+
+# Pergunta: de qual pet (pet_id) é a visita com um id?
+# Recebe o id da visita (%s) e devolve uma linha com um valor só: o pet_id. Se a visita não existir,
+# não devolve nenhuma linha.
+SELECT_VISIT_PET_ID = """
+SELECT pet_id FROM visits WHERE id = %s;
+"""
+
 
 # Dados que a fixture owner_with_pet grava direto no banco. São do próprio teste: nenhum vem do seed,
 # então a limpeza não mexe em dado do populateDB.sql.

@@ -6,10 +6,16 @@ import pytest
 
 from conftest import (
     COUNT_PETS,
+    COUNT_VISITS,
+    DELETE_PET,
+    DELETE_VISIT,
+    INSERT_PET,
+    INSERT_VISIT,
     PREPARED_PET_TYPE_NAME,
     SECOND_PET_TYPE_NAME,
     SELECT_MAX_OWNER_ID,
     SELECT_OWNER_BY_ID,
+    SELECT_VISIT_PET_ID,
 )
 
 # Pet padrão do docs/casos-de-teste.md: nome com letras, nascimento no passado. O tipo é o da fixture.
@@ -418,3 +424,61 @@ def test_apagar_pet_sem_visitas_remove_so_o_pet(api, db, owner_with_pet):
     pets_after = db.execute(COUNT_PETS).fetchone()[0]
     assert pets_after == pets_before - 1, f"o total de pets deveria cair para {pets_before - 1}, ficou {pets_after}"
     assert db.execute(SELECT_OWNER_BY_ID, (owner_id,)).fetchone() is not None, f"o dono {owner_id} deveria continuar no banco"
+
+
+@pytest.fixture
+def pet_with_two_visits_and_sibling(db, owner_with_pet_and_visit):
+    """Parte do pet com uma visita da fixture owner_with_pet_and_visit e grava por SQL a segunda visita dele e
+    um pet irmão, do mesmo dono e do mesmo tipo, com uma visita. O irmão é o controle do CT-API-PETS-13.
+
+    No fim, apaga o que criou (as visitas e o pet irmão) antes de as fixtures de base apagarem o resto."""
+    created = dict(owner_with_pet_and_visit)
+    created["second_visit_id"] = db.execute(
+        INSERT_VISIT, (created["pet_id"], date(2026, 11, 2), "Retorno")
+    ).fetchone()[0]
+    created["sibling_pet_id"] = db.execute(
+        INSERT_PET, ("Bidu", date(2020, 5, 10), created["type_id"], created["owner_id"])
+    ).fetchone()[0]
+    created["sibling_visit_id"] = db.execute(
+        INSERT_VISIT, (created["sibling_pet_id"], date(2026, 11, 3), "Vacina")
+    ).fetchone()[0]
+    yield created
+    db.execute(DELETE_VISIT, (created["sibling_visit_id"],))
+    db.execute(DELETE_PET, (created["sibling_pet_id"],))
+    db.execute(DELETE_VISIT, (created["second_visit_id"],))
+
+
+def test_apagar_pet_com_visitas_apaga_as_visitas_dele_e_mantem_o_irmao(api, db, pet_with_two_visits_and_sibling):
+    """CT-API-PETS-13: apagar um pet que tem visitas responde 204 e remove junto as visitas dele; o outro pet
+    do mesmo dono, a visita desse outro pet, o dono e o tipo continuam."""
+    # Preparar: o cenário vem da fixture; aqui só os totais antes
+    scenario = pet_with_two_visits_and_sibling
+    pet_id = scenario["pet_id"]
+    pets_before = db.execute(COUNT_PETS).fetchone()[0]
+    visits_before = db.execute(COUNT_VISITS).fetchone()[0]
+
+    # Agir
+    response = api.delete(f"/pets/{pet_id}")
+
+    # Verificar a resposta
+    assert response.status_code == 204, f"DELETE /pets/{pet_id} deveria responder 204, respondeu {response.status_code}"
+
+    # Verificar o banco: o pet e as duas visitas dele não existem mais
+    assert db.execute(SELECT_PET_BY_ID, (pet_id,)).fetchone() is None, f"o pet {pet_id} não deveria mais existir"
+    for visit_id in (scenario["visit_id"], scenario["second_visit_id"]):
+        assert db.execute(SELECT_VISIT_PET_ID, (visit_id,)).fetchone() is None, f"a visita {visit_id} não deveria mais existir"
+
+    # um pet e duas visitas a menos
+    pets_after = db.execute(COUNT_PETS).fetchone()[0]
+    visits_after = db.execute(COUNT_VISITS).fetchone()[0]
+    assert pets_after == pets_before - 1, f"o total de pets deveria cair para {pets_before - 1}, ficou {pets_after}"
+    assert visits_after == visits_before - 2, f"o total de visitas deveria cair para {visits_before - 2}, ficou {visits_after}"
+
+    # o irmão continua com a visita dele, com o mesmo dono e o mesmo tipo (pela chave estrangeira, o tipo existe)
+    sibling = db.execute(SELECT_PET_BY_ID, (scenario["sibling_pet_id"],)).fetchone()
+    assert sibling is not None and sibling[2:] == (scenario["owner_id"], scenario["type_id"]), (
+        f"o pet irmão deveria continuar, com o dono {scenario['owner_id']} e o tipo {scenario['type_id']}: {sibling}"
+    )
+    sibling_visit = db.execute(SELECT_VISIT_PET_ID, (scenario["sibling_visit_id"],)).fetchone()
+    assert sibling_visit == (scenario["sibling_pet_id"],), f"a visita do pet irmão deveria continuar: {sibling_visit}"
+    assert db.execute(SELECT_OWNER_BY_ID, (scenario["owner_id"],)).fetchone() is not None, "o dono deveria continuar"

@@ -4,7 +4,7 @@ import re
 
 import pytest
 
-from conftest import COUNT_PETS, SELECT_MAX_OWNER_ID, SELECT_OWNER_BY_ID
+from conftest import COUNT_PETS, COUNT_VISITS, SELECT_MAX_OWNER_ID, SELECT_OWNER_BY_ID, SELECT_VISIT_PET_ID
 
 # Dono padrão do docs/casos-de-teste.md: nome e sobrenome só com letras, telefone com 10 dígitos.
 OWNER = {
@@ -329,20 +329,6 @@ def test_apagar_dono_sem_pets_remove_a_linha(api, db, prepared_owner):
     assert row is None, f"o dono {owner_id} não deveria mais existir no banco, mas existe: {row}"
     count_after = db.execute(COUNT_OWNERS).fetchone()[0]
     assert count_after == count_before - 1, f"o total de donos deveria cair para {count_before - 1}, ficou {count_after}"
-
-
-# Pergunta: quantas linhas existem hoje na tabela `visits`?
-# Devolve uma linha só, com um único valor: o total de visitas.
-COUNT_VISITS = """
-SELECT COUNT(*) FROM visits;
-"""
-
-# Pergunta: de qual pet (pet_id) é a visita com um id?
-# Recebe o id da visita (%s) e devolve uma linha com um valor só: o pet_id. Se a visita não existir,
-# não devolve nenhuma linha.
-SELECT_VISIT_PET_ID = """
-SELECT pet_id FROM visits WHERE id = %s;
-"""
 
 
 def test_apagar_dono_com_pet_apaga_junto_o_pet_e_a_visita(api, db, owner_with_pet_and_visit):
