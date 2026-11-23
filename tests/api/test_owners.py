@@ -1,5 +1,7 @@
 """Testes de donos (tabela `owners`), com o banco como oráculo."""
 
+import pytest
+
 # Dono padrão do docs/casos-de-teste.md: nome e sobrenome só com letras, telefone com 10 dígitos.
 OWNER = {
     "firstName": "Clara",
@@ -35,3 +37,36 @@ def test_criar_dono_com_dados_validos_grava_os_dados_enviados(api, db, owners_to
     assert row is not None, f"o banco deveria ter uma linha em owners com id {body['id']}"
     expected = (OWNER["firstName"], OWNER["lastName"], OWNER["address"], OWNER["city"], OWNER["telephone"])
     assert row == expected, f"a linha gravada deveria ser {expected}, é {row}"
+
+
+# Pergunta: quantas linhas existem hoje na tabela `owners`?
+# A consulta deve devolver uma linha só, com um único valor: o total de donos.
+COUNT_OWNERS = """
+SELECT COUNT(*) FROM owners; 
+"""
+
+@pytest.mark.parametrize("missing_field", ["firstName", "lastName", "address", "city", "telephone"])
+def test_criar_dono_sem_campo_obrigatorio_e_recusado_sem_gravar(api, db, owners_to_delete, missing_field):
+    """CT-API-OWNERS-02: criar um dono sem um dos campos obrigatórios responde 400 e não grava dono parcial."""
+    # Preparar: o dono padrão sem o campo da vez, e o total de donos antes
+    payload = {field: value for field, value in OWNER.items() if field != missing_field}
+    count_before = db.execute(COUNT_OWNERS).fetchone()[0]
+
+    # Agir
+    response = api.post("/owners", json=payload)
+    body = response.json()
+    # Se a API criar o dono por engano, ele é apagado no fim
+    if isinstance(body, dict) and "id" in body:
+        owners_to_delete.append(body["id"])
+
+    # Verificar a resposta: 400, e o erro aponta só o campo que faltou
+    assert response.status_code == 400, f"POST /owners sem {missing_field} deveria responder 400, respondeu {response.status_code}"
+    errors = body.get("schemaValidationErrors") or []
+    assert errors, "a resposta deveria listar os erros de validação"
+    assert {error["field"] for error in errors} == {missing_field}, (
+        f"o erro deveria apontar só {missing_field}, apontou {sorted({error['field'] for error in errors})}"
+    )
+
+    # Verificar o banco: nenhum dono novo
+    count_after = db.execute(COUNT_OWNERS).fetchone()[0]
+    assert count_after == count_before, f"o total de donos deveria continuar {count_before}, ficou {count_after}"
