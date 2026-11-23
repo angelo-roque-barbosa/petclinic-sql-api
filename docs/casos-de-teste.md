@@ -665,11 +665,11 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – positivo |
 | **Prioridade** | Média |
 | **Objetivo** | Garantir que o tipo é gravado com o nome enviado. |
-| **Dados de teste** | name com sufixo único. |
+| **Dados de teste** | name de um tipo que não existe no banco: `furão` no Postman e `coelho` no pytest. O contrato só aceita letras, espaços, hífen e apóstrofo, então não há sufixo numérico; o tipo criado é apagado no fim (fixture `pet_types_to_delete` no pytest). |
 | **Passos** | 1. Enviar POST /api/pettypes.<br>2. Verificar a resposta.<br>3. Buscar no banco a linha de `types` com o id devolvido. |
 | **Resultado esperado** | Passo 2: status 2xx de criação.<br>Passo 3: name igual ao enviado. |
 | **Status** | Não executado |
-| **Observações** | O contrato declara só 200 para o POST; o status exato de criação fica a confirmar na execução. |
+| **Observações** | O contrato declara só 200 para o POST, mas na execução o status de criação é 201. |
 
 #### CT-API-PET-TYPES-02 — Tipo sem nome, vazio ou só com espaços
 
