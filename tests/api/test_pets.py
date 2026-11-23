@@ -423,15 +423,12 @@ def test_apagar_pet_sem_visitas_remove_so_o_pet(api, db, owner_with_pet):
 
 
 @pytest.fixture
-def pet_with_two_visits_and_sibling(db, owner_with_pet_and_visit):
-    """Parte do pet com uma visita da fixture owner_with_pet_and_visit e grava por SQL a segunda visita dele e
-    um pet irmão, do mesmo dono e do mesmo tipo, com uma visita. O irmão é o controle do CT-API-PETS-13.
+def pet_with_two_visits_and_sibling(db, pet_with_two_visits):
+    """Parte do pet com duas visitas da fixture pet_with_two_visits e grava por SQL um pet irmão, do mesmo dono
+    e do mesmo tipo, com uma visita. O irmão é o controle do CT-API-PETS-13.
 
-    No fim, apaga o que criou (as visitas e o pet irmão) antes de as fixtures de base apagarem o resto."""
-    created = dict(owner_with_pet_and_visit)
-    created["second_visit_id"] = db.execute(
-        INSERT_VISIT, (created["pet_id"], date(2026, 11, 2), "Retorno")
-    ).fetchone()[0]
+    No fim, apaga o que criou (a visita e o pet irmão) antes de as fixtures de base apagarem o resto."""
+    created = dict(pet_with_two_visits)
     created["sibling_pet_id"] = db.execute(
         INSERT_PET, ("Bidu", date(2020, 5, 10), created["type_id"], created["owner_id"])
     ).fetchone()[0]
@@ -441,7 +438,6 @@ def pet_with_two_visits_and_sibling(db, owner_with_pet_and_visit):
     yield created
     db.execute(DELETE_VISIT, (created["sibling_visit_id"],))
     db.execute(DELETE_PET, (created["sibling_pet_id"],))
-    db.execute(DELETE_VISIT, (created["second_visit_id"],))
 
 
 def test_apagar_pet_com_visitas_apaga_as_visitas_dele_e_mantem_o_irmao(api, db, pet_with_two_visits_and_sibling):

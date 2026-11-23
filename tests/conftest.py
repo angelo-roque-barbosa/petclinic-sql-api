@@ -159,6 +159,7 @@ PREPARED_OWNER = {
 }
 PREPARED_PET = {"name": "Thor", "birth_date": date(2020, 5, 10)}
 PREPARED_VISIT = {"visit_date": date(2026, 11, 1), "description": "Consulta de rotina"}
+SECOND_VISIT = {"visit_date": date(2026, 11, 2), "description": "Retorno"}
 
 # Pergunta: como gravar um tipo de pet novo e receber o id que o banco gerou para ele?
 # Recebe o nome como parâmetro (%s) e devolve uma linha com um valor só: o id criado.
@@ -320,3 +321,19 @@ def owner_with_pet_and_visit(db, owner_with_pet):
     ).fetchone()[0]
     yield created
     db.execute(DELETE_VISIT, (created["visit_id"],))
+
+
+@pytest.fixture
+def pet_with_two_visits(db, owner_with_pet_and_visit):
+    """Acrescenta ao pet da fixture owner_with_pet_and_visit uma segunda visita, gravada direto no banco com os
+    dados de SECOND_VISIT, e entrega os ids, com o da segunda visita em `second_visit_id`.
+
+    No fim, apaga a segunda visita; a primeira, o pet, o tipo e o dono são apagados depois, pelas fixtures de
+    que esta depende. Apagar zero linhas também serve."""
+    created = dict(owner_with_pet_and_visit)
+    created["second_visit_id"] = db.execute(
+        INSERT_VISIT,
+        (created["pet_id"], SECOND_VISIT["visit_date"], SECOND_VISIT["description"]),
+    ).fetchone()[0]
+    yield created
+    db.execute(DELETE_VISIT, (created["second_visit_id"],))
