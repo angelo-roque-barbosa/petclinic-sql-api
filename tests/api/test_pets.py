@@ -376,3 +376,25 @@ def test_atualizar_pet_com_dados_validos_grava_os_valores_e_mantem_o_dono(api, d
     row = db.execute(SELECT_PET_BY_ID, (pet_id,)).fetchone()
     expected = (payload["name"], date.fromisoformat(payload["birthDate"]), row_before[2], second_pet_type)
     assert row == expected, f"a linha do pet {pet_id} deveria ser {expected}, é {row}"
+
+
+def test_mover_pet_para_dono_inexistente_responde_404_sem_mudar_o_pet(api, db, owner_with_pet):
+    """CT-API-PETS-11: o PUT de um pet pelo caminho de um dono que não existe responde 404 e deixa a linha do
+    pet como estava, com o mesmo dono, sem gravar nem os outros campos do corpo."""
+    # Preparar: o pet vem da fixture; a linha de antes, lida do banco, é o valor esperado
+    pet_id = owner_with_pet["pet_id"]
+    row_before = db.execute(SELECT_PET_BY_ID, (pet_id,)).fetchone()
+    missing_owner_id = db.execute(SELECT_MAX_OWNER_ID).fetchone()[0] + 1
+    assert db.execute(SELECT_OWNER_BY_ID, (missing_owner_id,)).fetchone() is None, f"o dono {missing_owner_id} não deveria existir"
+    payload = {**UPDATED_PET, "type": {"id": owner_with_pet["type_id"], "name": PREPARED_PET_TYPE_NAME}}
+
+    # Agir
+    response = api.put(f"/owners/{missing_owner_id}/pets/{pet_id}", json=payload)
+
+    # Verificar a resposta
+    assert response.status_code == 404, f"PUT /owners/{missing_owner_id}/pets/{pet_id} deveria responder 404, respondeu {response.status_code}"
+
+    # Verificar o banco: a linha inteira igual à de antes, e o dono inexistente continua sem existir
+    row_after = db.execute(SELECT_PET_BY_ID, (pet_id,)).fetchone()
+    assert row_after == row_before, f"a linha do pet {pet_id} deveria continuar {row_before}, ficou {row_after}"
+    assert db.execute(SELECT_OWNER_BY_ID, (missing_owner_id,)).fetchone() is None, f"o PUT não deveria criar o dono {missing_owner_id}"

@@ -430,7 +430,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – recurso inexistente |
 | **Prioridade** | Média |
 | **Objetivo** | Garantir que a API não liga um pet a um dono que não existe. |
-| **Pré-condições** | Dono, tipo e pet criados via API. |
+| **Pré-condições** | Dono, tipo e pet gravados por SQL na fixture `owner_with_pet` (tests/conftest.py); a linha de antes é lida do banco e é o valor esperado. |
 | **Dados de teste** | ownerId inexistente: maior id de `owners` + 1, lido do banco na hora. |
 | **Passos** | 1. Enviar PUT /api/owners/{ownerId inexistente}/pets/{petId} com os dados do pet.<br>2. Verificar a resposta e a linha do pet no banco. |
 | **Resultado esperado** | Status 404 e linha do pet igual à de antes (mesmo owner_id). |
