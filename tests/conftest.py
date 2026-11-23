@@ -117,6 +117,7 @@ PREPARED_OWNER = {
     "telephone": "8199990001",
 }
 PREPARED_PET = {"name": "Thor", "birth_date": date(2020, 5, 10)}
+PREPARED_VISIT = {"visit_date": date(2026, 11, 1), "description": "Consulta de rotina"}
 
 # Pergunta: como gravar um tipo de pet novo e receber o id que o banco gerou para ele?
 # Recebe o nome como parâmetro (%s) e devolve uma linha com um valor só: o id criado.
@@ -159,6 +160,20 @@ DELETE_PET_TYPE = """
 DELETE FROM types WHERE id = %s;
 """
 
+# Pergunta: como gravar uma visita nova de um pet e receber o id gerado?
+# Recebe, nesta ordem, pet_id, visit_date e description (três %s)
+# e devolve uma linha com um valor só: o id criado.
+INSERT_VISIT = """
+INSERT INTO visits (pet_id, visit_date, description)
+VALUES (%s, %s, %s)
+RETURNING id;
+"""
+
+# Pergunta: como apagar a visita com um id? Recebe o id (%s).
+DELETE_VISIT = """
+DELETE FROM visits WHERE id = %s;
+"""
+
 
 @pytest.fixture
 def prepared_owner(db):
@@ -194,3 +209,18 @@ def owner_with_pet(db, prepared_owner):
             db.execute(DELETE_PET, (created["pet_id"],))
         if "type_id" in created:
             db.execute(DELETE_PET_TYPE, (created["type_id"],))
+
+
+@pytest.fixture
+def owner_with_pet_and_visit(db, owner_with_pet):
+    """Acrescenta ao pet da fixture owner_with_pet uma visita gravada direto no banco, e entrega os ids.
+
+    No fim, apaga a visita; o pet, o tipo e o dono são apagados depois, pelas fixtures de que esta depende.
+    Apagar zero linhas também serve, porque a visita pode já ter sido removida."""
+    created = dict(owner_with_pet)
+    created["visit_id"] = db.execute(
+        INSERT_VISIT,
+        (created["pet_id"], PREPARED_VISIT["visit_date"], PREPARED_VISIT["description"]),
+    ).fetchone()[0]
+    yield created
+    db.execute(DELETE_VISIT, (created["visit_id"],))

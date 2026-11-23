@@ -187,7 +187,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – regra de negócio |
 | **Prioridade** | Alta |
 | **Objetivo** | Garantir que apagar um dono remove junto os pets e as visitas dele, sem deixar remoção pela metade. |
-| **Pré-condições** | Tipo, dono, pet e visita criados via API. |
+| **Pré-condições** | Tipo, dono, pet e visita gravados por SQL na fixture `owner_with_pet_and_visit` (tests/conftest.py). |
 | **Dados de teste** | Id do dono criado. |
 | **Passos** | 1. Guardar os totais de donos, pets e visitas.<br>2. Enviar DELETE /api/owners/{id}.<br>3. Verificar a resposta.<br>4. Conferir no banco o dono, o pet, a visita e os totais. |
 | **Resultado esperado** | Passo 3: status 204.<br>Passo 4: dono, pet e visita não existem mais, e cada total tem exatamente um registro a menos. |

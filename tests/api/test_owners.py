@@ -333,3 +333,54 @@ def test_apagar_dono_sem_pets_remove_a_linha(api, db, prepared_owner):
     assert row is None, f"o dono {owner_id} não deveria mais existir no banco, mas existe: {row}"
     count_after = db.execute(COUNT_OWNERS).fetchone()[0]
     assert count_after == count_before - 1, f"o total de donos deveria cair para {count_before - 1}, ficou {count_after}"
+
+
+# Pergunta: quantas linhas existem hoje na tabela `pets`?
+# Devolve uma linha só, com um único valor: o total de pets.
+COUNT_PETS = """
+SELECT COUNT(*) FROM pets;
+"""
+
+# Pergunta: quantas linhas existem hoje na tabela `visits`?
+# Devolve uma linha só, com um único valor: o total de visitas.
+COUNT_VISITS = """
+SELECT COUNT(*) FROM visits;
+"""
+
+# Pergunta: de qual pet (pet_id) é a visita com um id?
+# Recebe o id da visita (%s) e devolve uma linha com um valor só: o pet_id. Se a visita não existir,
+# não devolve nenhuma linha.
+SELECT_VISIT_PET_ID = """
+SELECT pet_id FROM visits WHERE id = %s;
+"""
+
+
+def test_apagar_dono_com_pet_apaga_junto_o_pet_e_a_visita(api, db, owner_with_pet_and_visit):
+    """CT-API-OWNERS-10: apagar um dono que tem pet responde 204 e remove junto o pet e a visita dele,
+    exatamente um registro de cada."""
+    # Preparar: dono, pet e visita vêm da fixture, gravados por SQL; aqui só os totais antes
+    owner_id = owner_with_pet_and_visit["owner_id"]
+    pet_id = owner_with_pet_and_visit["pet_id"]
+    visit_id = owner_with_pet_and_visit["visit_id"]
+    owners_before = db.execute(COUNT_OWNERS).fetchone()[0]
+    pets_before = db.execute(COUNT_PETS).fetchone()[0]
+    visits_before = db.execute(COUNT_VISITS).fetchone()[0]
+
+    # Agir
+    response = api.delete(f"/owners/{owner_id}")
+
+    # Verificar a resposta
+    assert response.status_code == 204, f"DELETE /owners/{owner_id} deveria responder 204, respondeu {response.status_code}"
+
+    # Verificar o banco: dono, pet e visita não existem mais (o tipo fica de fora: é o BUG-03)
+    assert db.execute(SELECT_OWNER_BY_ID, (owner_id,)).fetchone() is None, f"o dono {owner_id} não deveria mais existir"
+    assert db.execute(SELECT_PET_OWNER_ID, (pet_id,)).fetchone() is None, f"o pet {pet_id} não deveria mais existir"
+    assert db.execute(SELECT_VISIT_PET_ID, (visit_id,)).fetchone() is None, f"a visita {visit_id} não deveria mais existir"
+
+    # e saiu exatamente um registro de cada
+    owners_after = db.execute(COUNT_OWNERS).fetchone()[0]
+    pets_after = db.execute(COUNT_PETS).fetchone()[0]
+    visits_after = db.execute(COUNT_VISITS).fetchone()[0]
+    assert owners_after == owners_before - 1, f"o total de donos deveria cair para {owners_before - 1}, ficou {owners_after}"
+    assert pets_after == pets_before - 1, f"o total de pets deveria cair para {pets_before - 1}, ficou {pets_after}"
+    assert visits_after == visits_before - 1, f"o total de visitas deveria cair para {visits_before - 1}, ficou {visits_after}"
