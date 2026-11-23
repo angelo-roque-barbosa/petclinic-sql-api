@@ -159,6 +159,9 @@ execução; quando difere do esperado, a linha aponta o bug.
 | `description` (POST de visita) | só espaços (o banco aceita) | `'   '` | 400, nada gravado | 201, gravada (BUG-11) |
 | `description` (POST de visita) | no limite (no banco, `text` sem limite) | 255 caracteres | 201, gravada inteira | 201, gravada inteira |
 | `description` (POST de visita) | acima do limite | 256 caracteres | 400, nada gravado | 400, nada gravado |
+| `date` (POST de visita) | no limite: dia do nascimento do pet | nascimento | 201, gravada igual | 201, gravada igual |
+| `date` (POST de visita) | antes do nascimento (o banco não compara) | nascimento − 1 dia | 400, nada gravado | 201, gravada (BUG-12) |
+| `date` (POST de visita) | muito antes do nascimento | `1900-01-01` | 400, nada gravado | 201, gravada (BUG-12) |
 
 ## Achados
 

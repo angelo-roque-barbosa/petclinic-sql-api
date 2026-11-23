@@ -539,12 +539,12 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – regra de negócio |
 | **Prioridade** | Alta |
 | **Objetivo** | Garantir que a API não aceita visita com data anterior ao nascimento do pet. |
-| **Pré-condições** | Dono, tipo e pet com nascimento conhecido, criados via API. |
+| **Pré-condições** | Dono, tipo e pet com nascimento conhecido (2020-05-10) gravados por SQL na fixture `owner_with_pet` (tests/conftest.py). |
 | **Dados de teste** | date = nascimento − 1 dia, nascimento e 1900-01-01. |
 | **Passos** | 1. Para cada data, enviar POST /api/owners/{ownerId}/pets/{petId}/visits.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | Dia do nascimento: status 201.<br>Nascimento − 1 dia e 1900-01-01: status 400 e nenhuma visita nova. |
 | **Status** | Não executado |
-| **Observações** | Dicionário: o banco não compara a data da visita com o nascimento do pet.<br>Regra adotada em 2026-11-20: a visita não pode ser anterior ao nascimento, embora o contrato não traga a regra. Hoje as datas anteriores são aceitas: é o BUG-12 (CT-BUG-12-01). Na coleção do Postman entra só o dia do nascimento (`CT-API-VISITS-05a`), para ela continuar sem falhas conhecidas. |
+| **Observações** | Dicionário: o banco não compara a data da visita com o nascimento do pet.<br>Regra adotada em 2026-11-20: a visita não pode ser anterior ao nascimento, embora o contrato não traga a regra. Hoje as datas anteriores são aceitas: é o BUG-12 (CT-BUG-12-01). Na coleção do Postman entra só o dia do nascimento (`CT-API-VISITS-05a`), e no pytest também (`test_criar_visita_no_dia_do_nascimento_do_pet_grava_a_data`), para as duas suítes continuarem sem falhas conhecidas. |
 
 #### CT-API-VISITS-06 — Visita com data no futuro (agendamento)
 
