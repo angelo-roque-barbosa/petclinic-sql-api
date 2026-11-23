@@ -19,6 +19,9 @@ docker compose exec db psql -U petclinic petclinic    # abre o psql no banco
 docker compose down -v                                # derruba e apaga os dados do banco
 ```
 
+A imagem da API é fixada pelo digest da versão 4.0.2 em que os bugs foram reproduzidos, para o ambiente local e o
+GitHub Actions rodarem sempre a mesma versão; o comentário no `docker-compose.yml` diz como trocar.
+
 Os dois serviços têm healthcheck: o banco com `pg_isready`, a API com `curl` no `/v3/api-docs`. A API só sobe
 depois do banco saudável, e o `--wait` só termina quando a API responde (cerca de 20 s).
 

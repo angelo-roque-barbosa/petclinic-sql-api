@@ -12,7 +12,10 @@ services:
       interval: 5s
       retries: 10
   api:
-    image: springcommunity/spring-petclinic-rest
+    # Imagem fixada pelo digest (a 4.0.2 republicada em 2026-11-14, em que os bugs do BUGS.md foram reproduzidos),
+    # para o ambiente local e o GitHub Actions rodarem sempre a mesma versão. Trocar de versão é uma decisão:
+    # baixar a nova, rodar a coleção e reproduzir os bugs nela antes de atualizar o digest.
+    image: springcommunity/spring-petclinic-rest@sha256:daba846d44224f349043bd630a5163b22e97893f2448d1985e485f234c1f5e2b
     depends_on:
       db:
         condition: service_healthy
