@@ -1079,6 +1079,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Enviar GET /api/vets/{id inexistente}.<br>2. Verificar a resposta. |
 | **Resultado esperado** | Status 404. |
 | **Status** | Não executado |
+| **Observações** | Em 2026-11-23, o maior id + 1 respondeu 404 com o corpo vazio; o id `0` também respondeu 404. Na coleção do Postman: `CT-API-VETS-11`. Id negativo responde 500 (BUG-09), e id não numérico também (mesma causa do BUG-01). |
 
 ### tests/api/test_users.py
 

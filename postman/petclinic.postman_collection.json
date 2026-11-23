@@ -4621,6 +4621,44 @@
               }
             }
           ]
+        },
+        {
+          "name": "CT-API-VETS-11",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vets/{{nonexistentVetId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vets",
+                "{{nonexistentVetId}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Descobre um id de veterinário que não existe: o maior id atual + 1\npm.sendRequest(pm.environment.get(\"baseUrl\") + \"/vets\", (err, res) => {\n  if (err) throw err;\n  const ids = res.json().map((vet) => vet.id);\n  pm.collectionVariables.set(\"vetIdsBefore\", JSON.stringify(ids));\n  pm.collectionVariables.set(\"nonexistentVetId\", Math.max(...ids) + 1);\n});\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const id = Number(pm.collectionVariables.get(\"nonexistentVetId\"));\nconst idsBefore = JSON.parse(pm.collectionVariables.get(\"vetIdsBefore\"));\n\npm.test(\"id consultado não está na lista de veterinários\", () => {\n  pm.expect(idsBefore).to.not.include(id);\n});\n\npm.test(\"status 404\", () => pm.response.to.have.status(404));\n\npm.test(\"resposta não traz dados de veterinário\", () => {\n  pm.expect(pm.response.text()).to.not.include(\"firstName\");\n});\n\npm.test(\"responde em menos de 500 ms\", () => {\n  pm.expect(pm.response.responseTime).to.be.below(500);\n});\n"
+                ]
+              }
+            }
+          ]
         }
       ]
     },
@@ -6351,6 +6389,14 @@
     },
     {
       "key": "linkedControlVetId",
+      "value": ""
+    },
+    {
+      "key": "nonexistentVetId",
+      "value": ""
+    },
+    {
+      "key": "vetIdsBefore",
       "value": ""
     }
   ]
