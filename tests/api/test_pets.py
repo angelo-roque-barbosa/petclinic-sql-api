@@ -1,6 +1,6 @@
 """Testes de pets (tabela `pets`), com o banco como oráculo."""
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, timedelta
 
 import pytest
 
@@ -16,6 +16,7 @@ from conftest import (
     SELECT_MAX_OWNER_ID,
     SELECT_OWNER_BY_ID,
     SELECT_VISIT_PET_ID,
+    today_utc,
 )
 
 # Pet padrão do docs/casos-de-teste.md: nome com letras, nascimento no passado. O tipo é o da fixture.
@@ -166,11 +167,6 @@ def test_criar_pet_com_nome_de_31_caracteres_e_recusado_sem_gravar(api, db, prep
     # Verificar o banco: o dono, criado sem pets, continua sem pets
     pets_of_owner = db.execute(COUNT_PETS_BY_OWNER, (owner_id,)).fetchone()[0]
     assert pets_of_owner == 0, f"o dono {owner_id} deveria continuar sem pets, tem {pets_of_owner}"
-
-
-def today_utc():
-    """Hoje no fuso da API (UTC), calculado na hora do teste."""
-    return datetime.now(timezone.utc).date()
 
 
 def test_criar_pet_nascido_hoje_grava_a_data(api, db, prepared_owner, prepared_pet_type, pets_to_delete):

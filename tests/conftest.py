@@ -6,7 +6,7 @@ API_BASE_URL, API_WAIT_SECONDS, PGHOST, PGPORT, PGDATABASE, PGUSER e PGPASSWORD.
 
 import os
 import time
-from datetime import date
+from datetime import date, datetime, timezone
 
 import psycopg
 import pytest
@@ -47,6 +47,11 @@ class ApiClient:
 
     def delete(self, path, **kwargs):
         return self.request("DELETE", path, **kwargs)
+
+
+def today_utc():
+    """Hoje no fuso da API (UTC), calculado na hora do teste."""
+    return datetime.now(timezone.utc).date()
 
 
 def wait_for_api(client, deadline_seconds):
