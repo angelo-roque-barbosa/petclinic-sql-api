@@ -2,6 +2,8 @@
 
 from datetime import date
 
+import pytest
+
 # Visita padrão: a data fica entre o nascimento do pet da fixture (2020-05-10) e hoje.
 VISIT = {"date": "2026-11-01", "description": "Consulta de rotina"}
 
@@ -13,7 +15,6 @@ SELECT pet_id, visit_date, description
 FROM visits
 WHERE id = %s;
 """
-
 
 def test_criar_visita_com_dados_validos_grava_a_visita_ligada_ao_pet(api, db, owner_with_pet, visits_to_delete):
     """CT-API-VISITS-01: criar uma visita com dados válidos grava a data e a descrição enviadas, ligada ao pet certo."""
@@ -35,3 +36,38 @@ def test_criar_visita_com_dados_validos_grava_a_visita_ligada_ao_pet(api, db, ow
     row = db.execute(SELECT_VISIT_BY_ID, (body["id"],)).fetchone()
     expected = (pet_id, date.fromisoformat(VISIT["date"]), VISIT["description"])
     assert row == expected, f"a linha da visita {body['id']} deveria ser {expected}, é {row}"
+
+
+# Pergunta: quantas visitas um pet tem hoje?
+# Recebe o id do pet (%s) e devolve uma linha só, com um único valor: a quantidade de visitas dele.
+COUNT_VISITS_BY_PET = """
+SELECT COUNT(*) FROM visits WHERE pet_id = %s;
+"""
+
+
+@pytest.mark.parametrize("missing_field", ["date", "description"])
+def test_criar_visita_sem_campo_obrigatorio_e_recusada_sem_gravar(api, db, owner_with_pet, visits_to_delete, missing_field):
+    """CT-API-VISITS-02: criar uma visita sem data ou sem descrição responde 400 apontando o campo e não grava
+    visita para o pet."""
+    # Preparar: a visita padrão sem o campo da vez; o dono e o pet, sem visitas, vêm da fixture
+    owner_id = owner_with_pet["owner_id"]
+    pet_id = owner_with_pet["pet_id"]
+    payload = {field: value for field, value in VISIT.items() if field != missing_field}
+
+    # Agir
+    response = api.post(f"/owners/{owner_id}/pets/{pet_id}/visits", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        visits_to_delete.append(body["id"])
+
+    # Verificar a resposta: 400, e o erro aponta só o campo que faltou
+    assert response.status_code == 400, f"POST de visita sem {missing_field} deveria responder 400, respondeu {response.status_code}"
+    errors = body.get("schemaValidationErrors") or []
+    assert errors, "a resposta deveria listar os erros de validação"
+    assert {error["field"] for error in errors} == {missing_field}, (
+        f"o erro deveria apontar só {missing_field}, apontou {sorted({error['field'] for error in errors})}"
+    )
+
+    # Verificar o banco: o pet, criado sem visitas, continua sem visitas
+    visits_of_pet = db.execute(COUNT_VISITS_BY_PET, (pet_id,)).fetchone()[0]
+    assert visits_of_pet == 0, f"o pet {pet_id} deveria continuar sem visitas, tem {visits_of_pet}"

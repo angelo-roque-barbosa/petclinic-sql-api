@@ -495,7 +495,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – negativo (validação) |
 | **Prioridade** | Alta |
 | **Objetivo** | Garantir que a API recusa visita sem campo obrigatório como erro do cliente. |
-| **Pré-condições** | Dono, tipo e pet criados via API. |
+| **Pré-condições** | Dono, tipo e pet sem visitas gravados por SQL na fixture `owner_with_pet` (tests/conftest.py). |
 | **Dados de teste** | Visita padrão, omitindo um campo por vez: date, description. |
 | **Passos** | 1. Para cada campo, enviar POST /api/owners/{ownerId}/pets/{petId}/visits sem esse campo.<br>2. Verificar a resposta e as visitas do pet no banco. |
 | **Resultado esperado** | Status 400 em todos e zero visitas. |
