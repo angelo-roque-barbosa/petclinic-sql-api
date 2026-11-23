@@ -326,7 +326,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – validação (valor-limite) |
 | **Prioridade** | Baixa |
 | **Objetivo** | Garantir que o limite do contrato vale e que o nome aceito é gravado inteiro. |
-| **Pré-condições** | Dono padrão e tipo criados via API. |
+| **Pré-condições** | Dono, sem pets, e tipo gravados por SQL nas fixtures `prepared_owner` e `prepared_pet_type` (tests/conftest.py). |
 | **Dados de teste** | name com 30 e com 31 caracteres. |
 | **Passos** | 1. Para cada tamanho, enviar POST /api/owners/{ownerId}/pets.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | 30: status 201 e nome gravado com 30 caracteres.<br>31: status 400 e nenhum pet novo. |

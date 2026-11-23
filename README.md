@@ -145,6 +145,10 @@ execução; quando difere do esperado, a linha aponta o bug.
 | `lastName` (POST /api/owners) | acima do limite | 31 letras | 400, nada gravado | 400, nada gravado |
 | `firstName` (POST /api/owners) | com dígito, tamanho válido | `Ana2` | 400, nada gravado | 400, nada gravado |
 | `lastName` (POST /api/owners) | com dígito, tamanho válido | `Ana2` | 400, nada gravado | 400, nada gravado |
+| `name` (POST /api/owners/{id}/pets) | vazio (o banco aceita) | `''` | 400, nada gravado | 400, nada gravado |
+| `name` (POST /api/owners/{id}/pets) | só espaços (o banco aceita) | `'   '` | 400, nada gravado | 201, gravado (BUG-06) |
+| `name` (POST /api/owners/{id}/pets) | no limite | 30 caracteres | 201, gravado inteiro | 201, gravado inteiro |
+| `name` (POST /api/owners/{id}/pets) | acima do limite | 31 caracteres | 400, nada gravado | 400, nada gravado |
 
 ## Achados
 
