@@ -4,7 +4,7 @@ from datetime import date, timedelta
 
 import pytest
 
-from conftest import DELETE_PET, DELETE_VISIT, INSERT_PET, PREPARED_PET, PREPARED_VISIT, today_utc
+from conftest import COUNT_VISITS, DELETE_PET, DELETE_VISIT, INSERT_PET, PREPARED_PET, PREPARED_VISIT, today_utc
 
 # Visita padrão: a data fica entre o nascimento do pet da fixture (2020-05-10) e hoje.
 VISIT = {"date": "2026-11-01", "description": "Consulta de rotina"}
@@ -292,3 +292,38 @@ def test_criar_visita_igual_a_uma_existente_grava_outra_sem_mudar_a_primeira(api
     assert new_row == existing_row, f"a visita nova {body['id']} deveria ser {existing_row}, é {new_row}"
     row_after = db.execute(SELECT_VISIT_BY_ID, (existing_id,)).fetchone()
     assert row_after == existing_row, f"a visita existente {existing_id} deveria continuar {existing_row}, é {row_after}"
+
+
+# Pergunta: qual é o maior id da tabela `pets` hoje?
+# Devolve uma linha só, com um único valor: o maior id.
+SELECT_MAX_PET_ID = """
+SELECT MAX(id) FROM pets;
+"""
+
+
+def test_criar_visita_para_pet_inexistente_e_recusada_sem_gravar(api, db, owner_with_pet, visits_to_delete):
+    """CT-API-VISITS-10: criar uma visita para um pet que não existe, num dono que existe, responde 404 e não
+    grava visita nenhuma.
+
+    Hoje a recusa vem da chave estrangeira do banco, e não de uma validação da API: é a OBS-02. O pet da
+    fixture serve de controle, para a visita não ir parar no pet que o dono tem."""
+    # Preparar: o pet inexistente é o maior id de `pets` + 1, lido do banco na hora
+    owner_id = owner_with_pet["owner_id"]
+    control_pet_id = owner_with_pet["pet_id"]
+    missing_pet_id = db.execute(SELECT_MAX_PET_ID).fetchone()[0] + 1
+    visits_before = db.execute(COUNT_VISITS).fetchone()[0]
+
+    # Agir
+    response = api.post(f"/owners/{owner_id}/pets/{missing_pet_id}/visits", json=VISIT)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        visits_to_delete.append(body["id"])
+
+    # Verificar a resposta
+    assert response.status_code == 404, f"POST de visita para o pet inexistente {missing_pet_id} deveria responder 404, respondeu {response.status_code}"
+
+    # Verificar o banco: o total de visitas não muda e o pet de controle continua sem visitas
+    visits_after = db.execute(COUNT_VISITS).fetchone()[0]
+    assert visits_after == visits_before, f"o total de visitas deveria continuar {visits_before}, ficou {visits_after}"
+    control_visits = db.execute(COUNT_VISITS_BY_PET, (control_pet_id,)).fetchone()[0]
+    assert control_visits == 0, f"o pet de controle {control_pet_id} deveria continuar sem visitas, tem {control_visits}"

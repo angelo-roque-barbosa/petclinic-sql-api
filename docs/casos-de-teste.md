@@ -614,7 +614,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – recurso inexistente |
 | **Prioridade** | Média |
 | **Objetivo** | Garantir que a API responde 404 e não grava visita sem pet. |
-| **Pré-condições** | Dono criado via API. |
+| **Pré-condições** | Dono, tipo e pet gravados por SQL na fixture `owner_with_pet` (tests/conftest.py). No pytest, o pet da fixture é o controle: ele continua sem visitas. |
 | **Dados de teste** | petId inexistente: maior id de `pets` + 1, lido do banco na hora. |
 | **Passos** | 1. Contar as linhas de `visits`.<br>2. Enviar POST /api/owners/{ownerId}/pets/{petId inexistente}/visits.<br>3. Verificar a resposta e contar de novo. |
 | **Resultado esperado** | Status 404 e mesma contagem. |
