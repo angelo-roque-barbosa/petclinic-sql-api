@@ -155,6 +155,8 @@ execução; quando difere do esperado, a linha aponta o bug.
 | `birthDate` (POST /api/owners/{id}/pets) | no limite: exatamente 50 anos, em UTC | hoje − 50 anos | 201, gravado igual | 201, gravado igual |
 | `birthDate` (POST /api/owners/{id}/pets) | antiga, logo depois do limite | hoje − 50 anos − 1 dia | 400, nada gravado | 400, nada gravado |
 | `birthDate` (POST /api/owners/{id}/pets) | antiga demais (o banco aceita) | `1800-01-01` | 400, nada gravado | 400, nada gravado |
+| `description` (POST de visita) | vazia (o banco aceita) | `''` | 400, nada gravado | 400, nada gravado |
+| `description` (POST de visita) | só espaços (o banco aceita) | `'   '` | 400, nada gravado | 201, gravada (BUG-11) |
 
 ## Achados
 

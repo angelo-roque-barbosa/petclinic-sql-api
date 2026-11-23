@@ -510,12 +510,12 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – negativo (validação) |
 | **Prioridade** | Média |
 | **Objetivo** | Garantir que a API recusa descrição sem conteúdo. |
-| **Pré-condições** | Dono, tipo e pet criados via API. |
+| **Pré-condições** | Dono, tipo e pet sem visitas gravados por SQL na fixture `owner_with_pet` (tests/conftest.py). |
 | **Dados de teste** | description = `''` e `'   '`. |
 | **Passos** | 1. Para cada descrição, enviar POST /api/owners/{ownerId}/pets/{petId}/visits.<br>2. Verificar a resposta e as visitas do pet no banco. |
 | **Resultado esperado** | Status 400 e zero visitas. |
 | **Status** | Não executado |
-| **Observações** | Dicionário: o banco aceita as duas (NOT NULL recusa ausente, não vazio).<br>Hoje `'   '` é aceito: é o BUG-11 (CT-BUG-11-01). Na coleção do Postman entra só `''` (`CT-API-VISITS-03a`), para ela continuar sem falhas conhecidas. |
+| **Observações** | Dicionário: o banco aceita as duas (NOT NULL recusa ausente, não vazio).<br>Hoje `'   '` é aceito: é o BUG-11 (CT-BUG-11-01). Na coleção do Postman entra só `''` (`CT-API-VISITS-03a`), e no pytest também (`test_criar_visita_com_descricao_vazia_e_recusada_sem_gravar`), para as duas suítes continuarem sem falhas conhecidas. |
 
 #### CT-API-VISITS-04 — Descrição no limite de 255 caracteres
 

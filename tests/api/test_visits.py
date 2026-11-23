@@ -71,3 +71,33 @@ def test_criar_visita_sem_campo_obrigatorio_e_recusada_sem_gravar(api, db, owner
     # Verificar o banco: o pet, criado sem visitas, continua sem visitas
     visits_of_pet = db.execute(COUNT_VISITS_BY_PET, (pet_id,)).fetchone()[0]
     assert visits_of_pet == 0, f"o pet {pet_id} deveria continuar sem visitas, tem {visits_of_pet}"
+
+
+def test_criar_visita_com_descricao_vazia_e_recusada_sem_gravar(api, db, owner_with_pet, visits_to_delete):
+    """CT-API-VISITS-03: criar uma visita com descrição vazia responde 400 apontando description e não grava
+    visita para o pet.
+
+    A descrição só com espaços também deveria ser recusada, mas hoje é aceita: é o BUG-11, coberto pelo
+    CT-BUG-11-01."""
+    # Preparar: a visita padrão com a descrição vazia; o dono e o pet, sem visitas, vêm da fixture
+    owner_id = owner_with_pet["owner_id"]
+    pet_id = owner_with_pet["pet_id"]
+    payload = {**VISIT, "description": ""}
+
+    # Agir
+    response = api.post(f"/owners/{owner_id}/pets/{pet_id}/visits", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        visits_to_delete.append(body["id"])
+
+    # Verificar a resposta: 400, e o erro aponta só a descrição
+    assert response.status_code == 400, f"POST de visita com descrição vazia deveria responder 400, respondeu {response.status_code}"
+    errors = body.get("schemaValidationErrors") or []
+    assert errors, "a resposta deveria listar os erros de validação"
+    assert {error["field"] for error in errors} == {"description"}, (
+        f"o erro deveria apontar só description, apontou {sorted({error['field'] for error in errors})}"
+    )
+
+    # Verificar o banco: o pet, criado sem visitas, continua sem visitas
+    visits_of_pet = db.execute(COUNT_VISITS_BY_PET, (pet_id,)).fetchone()[0]
+    assert visits_of_pet == 0, f"o pet {pet_id} deveria continuar sem visitas, tem {visits_of_pet}"
