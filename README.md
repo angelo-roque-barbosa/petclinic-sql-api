@@ -36,8 +36,17 @@ Testes:
 ```bash
 npm ci                                                # instala o Newman na versão do package-lock.json
 npx newman run postman/petclinic.postman_collection.json -e postman/local.postman_environment.json
-# pytest tests/api                                    # fase 4, ainda não existe
+
+python3 -m venv .venv                                 # ambiente virtual do pytest, só na primeira vez
+.venv/bin/pip install -r requirements.txt             # versões exatas, inclusive as dependências indiretas
+.venv/bin/pytest tests/api -v                         # testes com o banco como oráculo
 ```
+
+Os testes do pytest chamam a API e conferem o efeito direto no banco. As fixtures compartilhadas ficam em
+`tests/conftest.py`: elas esperam a API responder (por laço, nunca por espera fixa), abrem a conexão com o banco e
+apagam no fim os dados que cada teste criou. Se a API ou o banco não estiverem no ar, o pytest para com código 3,
+porque ambiente fora do ar não é resultado. Os endereços vêm de variáveis de ambiente (`API_BASE_URL`, `PGHOST`,
+`PGPORT` e outras), com os valores do `docker-compose.yml` como padrão.
 
 A coleção roda inteira e na ordem: ela cria os próprios dados, apaga tudo no fim e confere, no
 `CT-API-INTEGRITY-01`, que os totais terminaram iguais aos do início. No GitHub Actions, o workflow

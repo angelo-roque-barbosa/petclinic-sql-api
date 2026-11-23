@@ -1,0 +1,15 @@
+# Dependências diretas
+pytest==9.2.0
+requests==2.34.2
+psycopg[binary]==3.3.8
+
+# Dependências indiretas, fixadas para a instalação ser sempre a mesma
+certifi==2026.10.23
+charset-normalizer==3.5.2
+idna==3.20
+iniconfig==2.3.1
+packaging==26.3
+pluggy==1.7.0
+psycopg-binary==3.3.8
+Pygments==2.21.0
+urllib3==2.8.0
