@@ -1,0 +1,55 @@
+# Roda a coleção do Postman com o Newman contra a API e o PostgreSQL do docker-compose.yml,
+# no próprio runner do GitHub. Nada aponta para servidor de terceiros.
+name: Newman
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  newman:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Baixa o repositório
+        uses: actions/checkout@v7.0.1
+
+      - name: Prepara o Node
+        uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 24.14.0
+          cache: npm
+
+      - name: Instala o Newman (versão do package-lock.json)
+        run: npm ci
+
+      # O --wait espera os healthchecks: o banco com pg_isready, a API com curl no /v3/api-docs
+      # e o serviço de limpeza de índices (BUG-02) depois da primeira limpeza.
+      - name: Sobe API e PostgreSQL
+        run: docker compose up -d --wait
+
+      - name: Roda a coleção
+        run: >-
+          npx newman run postman/petclinic.postman_collection.json
+          -e postman/local.postman_environment.json
+          --reporters cli,junit
+          --reporter-junit-export newman-report.xml
+
+      - name: Guarda o relatório do Newman
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: newman-report
+          path: newman-report.xml
+          if-no-files-found: ignore
+
+      - name: Mostra os logs da API e do banco
+        if: failure()
+        run: docker compose logs api db
+
+      - name: Derruba o ambiente
+        if: always()
+        run: docker compose down -v

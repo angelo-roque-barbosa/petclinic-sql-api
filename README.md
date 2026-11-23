@@ -28,12 +28,19 @@ que ela cria a cada início (ver o aviso no BUG-02, em [BUGS.md](BUGS.md)). Assi
 limpeza sem erro; se ela falhar, o `--wait` também falha. Para ver as cópias, pare o serviço:
 `docker compose stop db-index-cleanup` (e `docker compose start db-index-cleanup` para religar).
 
-Testes (ainda não existem):
+Testes:
 
 ```bash
-# pytest tests/api
-# npx newman run postman/... -e postman/...
+npm ci                                                # instala o Newman na versão do package-lock.json
+npx newman run postman/petclinic.postman_collection.json -e postman/local.postman_environment.json
+# pytest tests/api                                    # fase 4, ainda não existe
 ```
+
+A coleção roda inteira e na ordem: ela cria os próprios dados, apaga tudo no fim e confere, no
+`CT-API-INTEGRITY-01`, que os totais terminaram iguais aos do início. No GitHub Actions, o workflow
+[`newman.yml`](.github/workflows/newman.yml) faz o mesmo a cada push e pull request: sobe o
+`docker-compose.yml` no próprio runner, roda a coleção e guarda o relatório JUnit; se uma verificação
+falhar, o job falha e mostra os logs da API e do banco.
 
 - API: http://localhost:9966/petclinic/api
 - Swagger: http://localhost:9966/petclinic/swagger-ui.html
