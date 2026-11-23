@@ -1,10 +1,10 @@
 """Testes de visitas (tabela `visits`), com o banco como oráculo."""
 
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 
-from conftest import PREPARED_PET
+from conftest import PREPARED_PET, today_utc
 
 # Visita padrão: a data fica entre o nascimento do pet da fixture (2020-05-10) e hoje.
 VISIT = {"date": "2026-11-01", "description": "Consulta de rotina"}
@@ -179,4 +179,31 @@ def test_criar_visita_no_dia_do_nascimento_do_pet_grava_a_data(api, db, owner_wi
     # Verificar o banco: a linha inteira, com a data do nascimento
     row = db.execute(SELECT_VISIT_BY_ID, (body["id"],)).fetchone()
     expected = (pet_id, birth, payload["description"])
+    assert row == expected, f"a linha da visita {body['id']} deveria ser {expected}, é {row}"
+
+
+def test_criar_visita_com_data_futura_grava_o_agendamento(api, db, owner_with_pet, visits_to_delete):
+    """CT-API-VISITS-06: uma visita com data no futuro (hoje + 30 dias, no fuso da API) é um agendamento, é
+    aceita e fica gravada com a data exata enviada.
+
+    Hoje a API não tem limite máximo de antecedência; essa regra ainda está a confirmar."""
+    # Preparar: a data é calculada na hora do teste, para continuar no futuro em qualquer dia
+    owner_id = owner_with_pet["owner_id"]
+    pet_id = owner_with_pet["pet_id"]
+    visit_date = today_utc() + timedelta(days=30)
+    assert visit_date > today_utc(), "a data do teste deveria estar no futuro"
+    payload = {**VISIT, "date": visit_date.isoformat()}
+
+    # Agir
+    response = api.post(f"/owners/{owner_id}/pets/{pet_id}/visits", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        visits_to_delete.append(body["id"])
+
+    # Verificar a resposta
+    assert response.status_code == 201, f"POST de visita agendada para {visit_date} deveria responder 201, respondeu {response.status_code}"
+
+    # Verificar o banco: a linha inteira, com a data futura exata
+    row = db.execute(SELECT_VISIT_BY_ID, (body["id"],)).fetchone()
+    expected = (pet_id, visit_date, payload["description"])
     assert row == expected, f"a linha da visita {body['id']} deveria ser {expected}, é {row}"

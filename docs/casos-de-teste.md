@@ -554,7 +554,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – positivo |
 | **Prioridade** | Média |
 | **Objetivo** | Garantir que uma visita futura pode ser agendada e é gravada com a data exata. |
-| **Pré-condições** | Dono, tipo e pet criados via API. |
+| **Pré-condições** | Dono, tipo e pet gravados por SQL na fixture `owner_with_pet` (tests/conftest.py). |
 | **Dados de teste** | date = hoje + 30 dias, calculada na hora do teste. |
 | **Passos** | 1. Enviar POST /api/owners/{ownerId}/pets/{petId}/visits.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | Status 201 e visit_date gravada igual à enviada. |
