@@ -4451,6 +4451,53 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "CT-API-VETS-07",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Cria as especialidades A, B e C, o veterinário do teste com A e B e um\n// veterinário de controle com A; depois conta todas as ligações veterinário-especialidade\nconst base = pm.environment.get(\"baseUrl\");\n\nfunction post(path, data, next) {\n  pm.sendRequest({\n    url: base + path,\n    method: \"POST\",\n    header: { \"Content-Type\": \"application/json\" },\n    body: { mode: \"raw\", raw: JSON.stringify(data) }\n  }, (err, res) => {\n    if (err) throw err;\n    if (res.code !== 201) throw new Error(\"Preparação falhou: POST \" + path + \" devolveu \" + res.code);\n    next(res.json());\n  });\n}\n\npost(\"/specialties\", { name: \"Hematologia\" }, (a) => {\n  post(\"/specialties\", { name: \"Nefrologia\" }, (b) => {\n    post(\"/specialties\", { name: \"Endocrinologia\" }, (cc) => {\n      pm.collectionVariables.set(\"swapSpecialtyAId\", a.id);\n      pm.collectionVariables.set(\"swapSpecialtyBId\", b.id);\n      pm.collectionVariables.set(\"swapSpecialtyBName\", b.name);\n      pm.collectionVariables.set(\"swapSpecialtyCId\", cc.id);\n      pm.collectionVariables.set(\"swapSpecialtyCName\", cc.name);\n      post(\"/vets\", { firstName: \"Davi\", lastName: \"Rocha\", specialties: [a, b] }, (vet) => {\n        pm.collectionVariables.set(\"swapVetId\", vet.id);\n        post(\"/vets\", { firstName: \"Elisa\", lastName: \"Prado\", specialties: [a] }, (control) => {\n          pm.collectionVariables.set(\"swapControlVetId\", control.id);\n          pm.sendRequest(base + \"/vets\", (err, res) => {\n            if (err) throw err;\n            const links = res.json().reduce((sum, v) => sum + v.specialties.length, 0);\n            pm.collectionVariables.set(\"vetSpecialtyLinksBefore\", links);\n          });\n        });\n      });\n    });\n  });\n});\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.environment.get(\"baseUrl\");\nconst sent = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));\nconst bId = String(pm.collectionVariables.get(\"swapSpecialtyBId\"));\nconst cId = String(pm.collectionVariables.get(\"swapSpecialtyCId\"));\nconst linksBefore = Number(pm.collectionVariables.get(\"vetSpecialtyLinksBefore\"));\nconst expected = [bId, cId].sort();\n\npm.test(\"lista enviada é B e C\", () => {\n  pm.expect(sent.specialties.map((s) => String(s.id)).sort()).to.eql(expected);\n});\n\npm.test(\"status 204\", () => pm.response.to.have.status(204));\n\npm.test(\"responde em menos de 500 ms\", () => {\n  pm.expect(pm.response.responseTime).to.be.below(500);\n});\n\n// O veterinário passa a ter exatamente B e C: A saiu, C entrou, nada sobrou\npm.sendRequest(base + \"/vets/\" + pm.collectionVariables.get(\"swapVetId\"), (err, res) => {\n  pm.test(\"veterinário tem exatamente as especialidades B e C\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(200);\n    pm.expect(res.json().specialties.map((s) => String(s.id)).sort()).to.eql(expected);\n  });\n});\n\n// O veterinário de controle também tem A: tirar A do veterinário do teste\n// não pode tirar A dele\npm.sendRequest(base + \"/vets/\" + pm.collectionVariables.get(\"swapControlVetId\"), (err, res) => {\n  pm.test(\"veterinário de controle continua com a especialidade A\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(200);\n    pm.expect(res.json().specialties.map((s) => String(s.id))).to.eql([String(pm.collectionVariables.get(\"swapSpecialtyAId\"))]);\n  });\n});\n\n// Saiu uma ligação (A) e entrou uma (C): o total não muda\npm.sendRequest(base + \"/vets\", (err, res) => {\n  pm.test(\"total de ligações veterinário-especialidade não mudou\", () => {\n    pm.expect(err).to.be.null;\n    const links = res.json().reduce((sum, v) => sum + v.specialties.length, 0);\n    pm.expect(links).to.eql(linksBefore);\n  });\n});\n"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"firstName\": \"Davi\",\n    \"lastName\": \"Rocha\",\n    \"specialties\": [\n        {\n            \"id\": {{swapSpecialtyBId}},\n            \"name\": \"{{swapSpecialtyBName}}\"\n        },\n        {\n            \"id\": {{swapSpecialtyCId}},\n            \"name\": \"{{swapSpecialtyCName}}\"\n        }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vets/{{swapVetId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vets",
+                "{{swapVetId}}"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -5270,6 +5317,35 @@
           ]
         },
         {
+          "name": "Limpeza: CT-API-VETS-07",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vets/{{swapVetId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vets",
+                "{{swapVetId}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Apaga os dois veterinários (com as ligações) antes das três especialidades\nconst base = pm.environment.get(\"baseUrl\");\nconst steps = [\n  { path: \"vets\", id: pm.collectionVariables.get(\"swapVetId\"), deleted: \"veterinário apagado ou já removido\", gone: \"veterinário não existe mais\" },\n  { path: \"vets\", id: pm.collectionVariables.get(\"swapControlVetId\"), deleted: \"veterinário de controle apagado ou já removido\", gone: \"veterinário de controle não existe mais\" },\n  { path: \"specialties\", id: pm.collectionVariables.get(\"swapSpecialtyAId\"), deleted: \"especialidade A apagada ou já removida\", gone: \"especialidade A não existe mais\" },\n  { path: \"specialties\", id: pm.collectionVariables.get(\"swapSpecialtyBId\"), deleted: \"especialidade B apagada ou já removida\", gone: \"especialidade B não existe mais\" },\n  { path: \"specialties\", id: pm.collectionVariables.get(\"swapSpecialtyCId\"), deleted: \"especialidade C apagada ou já removida\", gone: \"especialidade C não existe mais\" }\n];\n\nfunction checkDeleted(code, step) {\n  pm.test(step.deleted + \" (204 ou 404)\", () => {\n    pm.expect(code).to.be.oneOf([204, 404]);\n  });\n}\n\nfunction confirmGone(index) {\n  const step = steps[index];\n  pm.sendRequest(base + \"/\" + step.path + \"/\" + step.id, (err, res) => {\n    pm.test(step.gone + \" (GET devolve 404)\", () => {\n      pm.expect(err).to.be.null;\n      pm.expect(res.code).to.eql(404);\n    });\n\n    const next = steps[index + 1];\n    if (!next) return;\n    pm.sendRequest({ url: base + \"/\" + next.path + \"/\" + next.id, method: \"DELETE\" }, (delErr, delRes) => {\n      if (delErr) throw delErr;\n      checkDeleted(delRes.code, next);\n      confirmGone(index + 1);\n    });\n  });\n}\n\ncheckDeleted(pm.response.code, steps[0]);\nconfirmGone(0);\n"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Limpeza: CT-API-OWNERS-03b",
           "event": [
             {
@@ -5993,6 +6069,34 @@
     },
     {
       "key": "dupVetId",
+      "value": ""
+    },
+    {
+      "key": "swapSpecialtyAId",
+      "value": ""
+    },
+    {
+      "key": "swapSpecialtyBId",
+      "value": ""
+    },
+    {
+      "key": "swapSpecialtyBName",
+      "value": ""
+    },
+    {
+      "key": "swapSpecialtyCId",
+      "value": ""
+    },
+    {
+      "key": "swapSpecialtyCName",
+      "value": ""
+    },
+    {
+      "key": "swapVetId",
+      "value": ""
+    },
+    {
+      "key": "swapControlVetId",
       "value": ""
     }
   ]

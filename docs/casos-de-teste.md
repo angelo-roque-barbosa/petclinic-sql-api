@@ -1020,6 +1020,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Enviar PUT /api/vets/{id} com a nova lista.<br>2. Verificar a resposta.<br>3. Buscar no banco as ligações do vet. |
 | **Resultado esperado** | Status 2xx e exatamente duas ligações: B e C. |
 | **Status** | Não executado |
+| **Observações** | Em 2026-11-23, o PUT respondeu 204 e as ligações passaram de exatamente A e B para exatamente B e C. A lista vazia remove todas as ligações; sem `specialties`, a resposta é 400. Na coleção do Postman: `CT-API-VETS-07`, com um veterinário de controle que também tem A e tem de continuar com ela, e a conferência de que o total de ligações de todos os veterinários não muda (sai A, entra C). O controle pega um PUT que remova A de todos os veterinários, e não só do atualizado: sem um segundo veterinário com A, esse defeito passaria. As especialidades têm nomes únicos e vão com o `name` certo, porque a API as procura pelo nome (BUG-17). |
 
 #### CT-API-VETS-08 — Atualizar nome do veterinário
 
