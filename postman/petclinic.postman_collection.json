@@ -4175,6 +4175,190 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "CT-API-VETS-03a",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Nome com exatamente 30 letras, o limite do contrato\npm.collectionVariables.set(\"vetFirstName\", \"a\".repeat(30));\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const sent = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));\nconst body = pm.response.json();\n\npm.test(\"nome enviado tem 30 letras\", () => {\n  pm.expect(sent.firstName).to.match(/^\\p{L}{30}$/u);\n});\n\npm.test(\"status 201\", () => pm.response.to.have.status(201));\n\npm.test(\"nome na resposta igual ao enviado\", () => {\n  pm.expect(body.firstName).to.eql(sent.firstName);\n});\n\npm.test(\"responde em menos de 500 ms\", () => {\n  pm.expect(pm.response.responseTime).to.be.below(500);\n});\n\n// Confere o que ficou gravado, buscando o veterinário de novo\npm.sendRequest(pm.environment.get(\"baseUrl\") + \"/vets/\" + body.id, (err, res) => {\n  pm.test(\"nome gravado inteiro, igual ao enviado\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(200);\n    pm.expect(res.json().firstName).to.eql(sent.firstName);\n  });\n});\n\n// Veterinário criado por este request, para apagar no fim do fluxo\npm.collectionVariables.set(\"limitVetId\", body.id);\n"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"firstName\": \"{{vetFirstName}}\",\n    \"lastName\": \"Souza\",\n    \"specialties\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vets"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "CT-API-VETS-03b",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Nome com 31 letras, uma acima do limite do contrato\npm.collectionVariables.set(\"vetFirstName\", \"a\".repeat(31));\n\n// Quantos veterinários existem antes do POST\npm.sendRequest(pm.environment.get(\"baseUrl\") + \"/vets\", (err, res) => {\n  if (err) throw err;\n  pm.collectionVariables.set(\"vetsCountBefore\", res.json().length);\n});\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const sent = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));\nconst countBefore = Number(pm.collectionVariables.get(\"vetsCountBefore\"));\n\npm.test(\"nome enviado tem 31 letras\", () => {\n  pm.expect(sent.firstName).to.match(/^\\p{L}{31}$/u);\n});\n\npm.test(\"status 400\", () => pm.response.to.have.status(400));\n\n// O 400 tem de ser pelo firstName, com o valor enviado\npm.test(\"erro aponta o campo firstName com o valor enviado\", () => {\n  const errors = pm.response.json().schemaValidationErrors;\n  pm.expect(errors, \"lista de erros de validação\").to.be.an(\"array\").and.not.empty;\n  errors.forEach((e) => {\n    pm.expect(e.field).to.eql(\"firstName\");\n    pm.expect(e.rejectedValue).to.eql(sent.firstName);\n  });\n});\n\npm.test(\"responde em menos de 500 ms\", () => {\n  pm.expect(pm.response.responseTime).to.be.below(500);\n});\n\n// Nenhum veterinário pode ter sido criado\npm.sendRequest(pm.environment.get(\"baseUrl\") + \"/vets\", (err, res) => {\n  pm.test(\"quantidade de veterinários não mudou\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.json().length).to.eql(countBefore);\n  });\n});\n"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"firstName\": \"{{vetFirstName}}\",\n    \"lastName\": \"Souza\",\n    \"specialties\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vets"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "CT-API-VETS-03c",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Nome com dígito, fora do padrão do contrato\npm.collectionVariables.set(\"vetFirstName\", \"Ana2\");\n\n// Quantos veterinários existem antes do POST\npm.sendRequest(pm.environment.get(\"baseUrl\") + \"/vets\", (err, res) => {\n  if (err) throw err;\n  pm.collectionVariables.set(\"vetsCountBefore\", res.json().length);\n});\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const sent = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));\nconst countBefore = Number(pm.collectionVariables.get(\"vetsCountBefore\"));\n\npm.test(\"nome enviado tem dígito\", () => {\n  pm.expect(sent.firstName).to.match(/\\d/);\n});\n\npm.test(\"status 400\", () => pm.response.to.have.status(400));\n\n// O 400 tem de ser pelo firstName, com o valor enviado\npm.test(\"erro aponta o campo firstName com o valor enviado\", () => {\n  const errors = pm.response.json().schemaValidationErrors;\n  pm.expect(errors, \"lista de erros de validação\").to.be.an(\"array\").and.not.empty;\n  errors.forEach((e) => {\n    pm.expect(e.field).to.eql(\"firstName\");\n    pm.expect(e.rejectedValue).to.eql(sent.firstName);\n  });\n});\n\npm.test(\"responde em menos de 500 ms\", () => {\n  pm.expect(pm.response.responseTime).to.be.below(500);\n});\n\n// Nenhum veterinário pode ter sido criado\npm.sendRequest(pm.environment.get(\"baseUrl\") + \"/vets\", (err, res) => {\n  pm.test(\"quantidade de veterinários não mudou\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.json().length).to.eql(countBefore);\n  });\n});\n"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"firstName\": \"{{vetFirstName}}\",\n    \"lastName\": \"Souza\",\n    \"specialties\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vets"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "CT-API-VETS-03d",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Nome só com espaços\npm.collectionVariables.set(\"vetFirstName\", \"   \");\n\n// Quantos veterinários existem antes do POST\npm.sendRequest(pm.environment.get(\"baseUrl\") + \"/vets\", (err, res) => {\n  if (err) throw err;\n  pm.collectionVariables.set(\"vetsCountBefore\", res.json().length);\n});\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const sent = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));\nconst countBefore = Number(pm.collectionVariables.get(\"vetsCountBefore\"));\n\npm.test(\"nome enviado tem só espaços\", () => {\n  pm.expect(sent.firstName).to.be.a(\"string\").and.not.empty;\n  pm.expect(sent.firstName.trim()).to.eql(\"\");\n});\n\npm.test(\"status 400\", () => pm.response.to.have.status(400));\n\n// O 400 tem de ser pelo firstName, com o valor enviado\npm.test(\"erro aponta o campo firstName com o valor enviado\", () => {\n  const errors = pm.response.json().schemaValidationErrors;\n  pm.expect(errors, \"lista de erros de validação\").to.be.an(\"array\").and.not.empty;\n  errors.forEach((e) => {\n    pm.expect(e.field).to.eql(\"firstName\");\n    pm.expect(e.rejectedValue).to.eql(sent.firstName);\n  });\n});\n\npm.test(\"responde em menos de 500 ms\", () => {\n  pm.expect(pm.response.responseTime).to.be.below(500);\n});\n\n// Nenhum veterinário pode ter sido criado\npm.sendRequest(pm.environment.get(\"baseUrl\") + \"/vets\", (err, res) => {\n  pm.test(\"quantidade de veterinários não mudou\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.json().length).to.eql(countBefore);\n  });\n});\n"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"firstName\": \"{{vetFirstName}}\",\n    \"lastName\": \"Souza\",\n    \"specialties\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vets"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -4907,6 +5091,35 @@
           ]
         },
         {
+          "name": "Limpeza: CT-API-VETS-03a",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vets/{{limitVetId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vets",
+                "{{limitVetId}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// URL já com o id real (ex.: http://localhost:9966/petclinic/api/vets/7)\nconst url = pm.variables.replaceIn(pm.request.url.toString());\n\n// \"Já removido\" também é sucesso para uma limpeza\npm.test(\"veterinário apagado ou já removido (204 ou 404)\", () => {\n  pm.expect(pm.response.code).to.be.oneOf([204, 404]);\n});\n\n// Confere que o veterinário não existe mais\npm.sendRequest(url, (err, res) => {\n  pm.test(\"veterinário não existe mais (GET devolve 404)\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(404);\n  });\n});\n"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Limpeza: CT-API-OWNERS-03b",
           "event": [
             {
@@ -5602,6 +5815,14 @@
     },
     {
       "key": "vetsCountBefore",
+      "value": ""
+    },
+    {
+      "key": "vetFirstName",
+      "value": ""
+    },
+    {
+      "key": "limitVetId",
       "value": ""
     }
   ]

@@ -960,6 +960,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Para cada nome, enviar POST /api/vets.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | 30 letras: status 2xx e nome gravado com 30 caracteres.<br>Demais: status 400 e nenhum vet novo. |
 | **Status** | Não executado |
+| **Observações** | Em 2026-11-22, 30 letras responderam 201 e foram gravadas inteiras; 31 letras, `'Ana2'` e só espaços responderam 400 apontando `firstName`, sem gravar nada. Na coleção do Postman: `CT-API-VETS-03a` a `03d`, um por nome. Também foram aceitos `Maria José`, `Ana-Clara`, `D'Ávila` e 30 letras acentuadas; um nome com 4 palavras foi recusado, porque o `pattern` aceita no máximo 3. |
 
 #### CT-API-VETS-04 — Veterinário com o mesmo nome de outro (homônimo)
 
