@@ -296,7 +296,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – negativo (validação) |
 | **Prioridade** | Alta |
 | **Objetivo** | Garantir que a API recusa pet sem nome, sem data de nascimento ou sem tipo e não grava nada. |
-| **Pré-condições** | Dono padrão e tipo criados via API. |
+| **Pré-condições** | Dono, sem pets, e tipo gravados por SQL nas fixtures `prepared_owner` e `prepared_pet_type` (tests/conftest.py). |
 | **Dados de teste** | Pet padrão, omitindo um campo por vez: name, birthDate, type. |
 | **Passos** | 1. Para cada campo, enviar POST /api/owners/{ownerId}/pets sem esse campo.<br>2. Verificar cada resposta.<br>3. Contar os pets do dono no banco. |
 | **Resultado esperado** | Passo 2: status 400 em todos.<br>Passo 3: zero pets. |

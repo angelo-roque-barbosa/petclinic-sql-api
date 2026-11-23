@@ -2,6 +2,8 @@
 
 from datetime import date
 
+import pytest
+
 from conftest import PREPARED_PET_TYPE_NAME
 
 # Pet padrão do docs/casos-de-teste.md: nome com letras, nascimento no passado. O tipo é o da fixture.
@@ -40,3 +42,40 @@ def test_criar_pet_com_dados_validos_grava_o_pet_ligado_ao_dono_e_ao_tipo(
     row = db.execute(SELECT_PET_BY_ID, (body["id"],)).fetchone()
     expected = (PET["name"], date.fromisoformat(PET["birthDate"]), owner_id, type_id)
     assert row == expected, f"a linha do pet {body['id']} deveria ser {expected}, é {row}"
+
+
+# Pergunta: quantos pets um dono tem hoje?
+# Recebe o id do dono (%s) e devolve uma linha só, com um único valor: a quantidade de pets dele.
+COUNT_PETS_BY_OWNER = """
+SELECT COUNT(*) FROM pets WHERE owner_id = %s;
+"""
+
+
+@pytest.mark.parametrize("missing_field", ["name", "birthDate", "type"])
+def test_criar_pet_sem_campo_obrigatorio_e_recusado_sem_gravar(
+    api, db, prepared_owner, prepared_pet_type, pets_to_delete, missing_field
+):
+    """CT-API-PETS-02: criar um pet sem nome, sem data de nascimento ou sem tipo responde 400 apontando o
+    campo e não grava pet para o dono."""
+    # Preparar: o pet padrão sem o campo da vez; o dono e o tipo vêm das fixtures
+    owner_id = prepared_owner
+    full_payload = {**PET, "type": {"id": prepared_pet_type, "name": PREPARED_PET_TYPE_NAME}}
+    payload = {field: value for field, value in full_payload.items() if field != missing_field}
+
+    # Agir
+    response = api.post(f"/owners/{owner_id}/pets", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        pets_to_delete.append(body["id"])
+
+    # Verificar a resposta: 400, e o erro aponta só o campo que faltou
+    assert response.status_code == 400, f"POST de pet sem {missing_field} deveria responder 400, respondeu {response.status_code}"
+    errors = body.get("schemaValidationErrors") or []
+    assert errors, "a resposta deveria listar os erros de validação"
+    assert {error["field"] for error in errors} == {missing_field}, (
+        f"o erro deveria apontar só {missing_field}, apontou {sorted({error['field'] for error in errors})}"
+    )
+
+    # Verificar o banco: o dono, criado sem pets, continua sem pets
+    pets_of_owner = db.execute(COUNT_PETS_BY_OWNER, (owner_id,)).fetchone()[0]
+    assert pets_of_owner == 0, f"o dono {owner_id} deveria continuar sem pets, tem {pets_of_owner}"
