@@ -20,12 +20,14 @@ def test_criar_dono_com_dados_validos_grava_os_dados_enviados(api, db, owners_to
     """CT-API-OWNERS-01: criar um dono com dados válidos grava no banco exatamente os dados enviados."""
     # Agir
     response = api.post("/owners", json=OWNER)
+    body = response.json()
+    # Registra o dono na limpeza antes de qualquer verificação: se uma delas falhar, ele é apagado mesmo assim
+    if isinstance(body, dict) and "id" in body:
+        owners_to_delete.append(body["id"])
 
     # Verificar a resposta
     assert response.status_code == 201, f"POST /owners deveria responder 201, respondeu {response.status_code}"
-    body = response.json()
-    owners_to_delete.append(body["id"])
-    assert isinstance(body["id"], int), "a resposta deveria trazer o id numérico do dono criado"
+    assert isinstance(body.get("id"), int), "a resposta deveria trazer o id numérico do dono criado"
     assert {field: body[field] for field in OWNER} == OWNER, "a resposta deveria trazer os campos enviados"
 
     # Verificar o banco: o esperado vem do que foi enviado, não da resposta da API
