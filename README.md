@@ -165,6 +165,9 @@ execução; quando difere do esperado, a linha aponta o bug.
 | `date` (POST de visita) | no futuro: agendamento (sem limite de antecedência por enquanto) | hoje + 30 dias | 201, gravada igual | 201, gravada igual |
 | `date` (POST de visita) | 29/02 em ano bissexto | `2020-02-29` | 201, gravada igual | 201, gravada igual |
 | `date` (POST de visita) | 29/02 em ano não bissexto (o banco recusa) | `2021-02-29` | 400, nada gravado | 500, nada gravado (BUG-08) |
+| `name` (POST de tipo de pet) | ausente ou nulo (o banco aceita NULL) | sem o campo, `null` | 400, nada gravado | 400, nada gravado |
+| `name` (POST de tipo de pet) | vazio (o banco aceita) | `''` | 400, nada gravado | 400, nada gravado |
+| `name` (POST de tipo de pet) | só espaços (o banco aceita) | `'   '` | 400, nada gravado | 400, nada gravado |
 
 ## Achados
 

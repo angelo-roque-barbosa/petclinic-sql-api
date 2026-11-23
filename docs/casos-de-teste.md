@@ -679,7 +679,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – negativo (validação) |
 | **Prioridade** | Média |
 | **Objetivo** | Garantir que a API recusa tipo sem nome. |
-| **Dados de teste** | Corpo sem name, name = null, `''` e `'   '`. |
+| **Dados de teste** | Corpo sem name, name = null, `''` e `'   '` (no pytest, um `parametrize` com os quatro corpos). |
 | **Passos** | 1. Contar as linhas de `types`.<br>2. Para cada corpo, enviar POST /api/pettypes.<br>3. Verificar cada resposta e contar de novo. |
 | **Resultado esperado** | Status 400 em todos e mesma contagem. |
 | **Status** | Não executado |
