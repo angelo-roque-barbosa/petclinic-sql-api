@@ -159,7 +159,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – negativo (validação) |
 | **Prioridade** | Média |
 | **Objetivo** | Garantir que a validação do telefone vale também na atualização e que a linha original fica como estava. |
-| **Pré-condições** | Dono padrão criado via API. |
+| **Pré-condições** | Dono gravado por SQL na fixture `owner_with_pet` (tests/conftest.py); a linha de antes é lida do banco e é o valor esperado. |
 | **Dados de teste** | Telefone `'abc'` e telefone com 11 dígitos. |
 | **Passos** | 1. Para cada telefone, enviar PUT /api/owners/{id} com o dono e esse telefone.<br>2. Verificar a resposta e a linha do dono no banco. |
 | **Resultado esperado** | Status 400 e linha do dono igual à de antes da chamada. |

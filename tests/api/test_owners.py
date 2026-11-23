@@ -285,3 +285,32 @@ def test_atualizar_dono_com_dados_validos_grava_na_mesma_linha_e_mantem_o_pet(ap
     assert count_after == count_before, f"o total de donos deveria continuar {count_before}, ficou {count_after}"
     pet_owner = db.execute(SELECT_PET_OWNER_ID, (pet_id,)).fetchone()
     assert pet_owner == (owner_id,), f"o pet {pet_id} deveria continuar com o dono {owner_id}, está com {pet_owner}"
+
+
+@pytest.mark.parametrize(
+    "telephone",
+    [pytest.param("abc", id="letras"), pytest.param("81999900021", id="11-digitos")],
+)
+def test_atualizar_dono_com_telefone_invalido_e_recusado_sem_mudar_a_linha(api, db, owner_with_pet, telephone):
+    """CT-API-OWNERS-08: atualizar um dono com telefone inválido responde 400 e deixa a linha como estava,
+    sem gravar nem os outros campos do corpo."""
+    # Preparar: o dono vem da fixture; a linha de antes, lida do banco, é o valor esperado
+    owner_id = owner_with_pet["owner_id"]
+    row_before = db.execute(SELECT_OWNER_BY_ID, (owner_id,)).fetchone()
+    payload = {**UPDATED_OWNER, "telephone": telephone}
+    assert not re.fullmatch(r"[0-9]{10}", telephone), "o telefone do teste não deveria ser um telefone válido"
+
+    # Agir
+    response = api.put(f"/owners/{owner_id}", json=payload)
+
+    # Verificar a resposta: 400, e o erro aponta só o telefone
+    assert response.status_code == 400, f"PUT /owners/{owner_id} com telefone {telephone!r} deveria responder 400, respondeu {response.status_code}"
+    errors = response.json().get("schemaValidationErrors") or []
+    assert errors, "a resposta deveria listar os erros de validação"
+    assert {error["field"] for error in errors} == {"telephone"}, (
+        f"o erro deveria apontar só telephone, apontou {sorted({error['field'] for error in errors})}"
+    )
+
+    # Verificar o banco: a linha inteira igual à de antes, nem o telefone nem os outros campos mudaram
+    row_after = db.execute(SELECT_OWNER_BY_ID, (owner_id,)).fetchone()
+    assert row_after == row_before, f"a linha do dono {owner_id} deveria continuar {row_before}, ficou {row_after}"
