@@ -4,7 +4,7 @@ from datetime import date, timedelta
 
 import pytest
 
-from conftest import DELETE_PET, DELETE_VISIT, INSERT_PET, PREPARED_PET, today_utc
+from conftest import DELETE_PET, DELETE_VISIT, INSERT_PET, PREPARED_PET, PREPARED_VISIT, today_utc
 
 # Visita padrão: a data fica entre o nascimento do pet da fixture (2020-05-10) e hoje.
 VISIT = {"date": "2026-11-01", "description": "Consulta de rotina"}
@@ -259,3 +259,36 @@ def test_criar_visita_em_29_de_fevereiro_de_ano_bissexto_grava_a_data(api, db, p
     row = db.execute(SELECT_VISIT_BY_ID, (body["id"],)).fetchone()
     expected = (pet_id, visit_date, payload["description"])
     assert row == expected, f"a linha da visita {body['id']} deveria ser {expected}, é {row}"
+
+
+def test_criar_visita_igual_a_uma_existente_grava_outra_sem_mudar_a_primeira(api, db, owner_with_pet_and_visit, visits_to_delete):
+    """CT-API-VISITS-09: enviar uma visita igual a outra que o pet já tem (mesma data e descrição) cria uma
+    visita nova, com outro id, e a existente continua igual.
+
+    Regra adotada: visitas iguais são permitidas, porque podem ser legítimas (um curativo de manhã e outro à
+    tarde). O risco coberto é o envio repetido sobrescrever a visita existente ou ser descartado."""
+    # Preparar: a primeira visita foi gravada por SQL pela fixture; o envio repete a data e a descrição dela
+    owner_id = owner_with_pet_and_visit["owner_id"]
+    pet_id = owner_with_pet_and_visit["pet_id"]
+    existing_id = owner_with_pet_and_visit["visit_id"]
+    existing_row = (pet_id, PREPARED_VISIT["visit_date"], PREPARED_VISIT["description"])
+    payload = {"date": PREPARED_VISIT["visit_date"].isoformat(), "description": PREPARED_VISIT["description"]}
+    visits_before = db.execute(COUNT_VISITS_BY_PET, (pet_id,)).fetchone()[0]
+
+    # Agir
+    response = api.post(f"/owners/{owner_id}/pets/{pet_id}/visits", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        visits_to_delete.append(body["id"])
+
+    # Verificar a resposta: criada, com um id diferente do da visita existente
+    assert response.status_code == 201, f"POST de visita igual a uma existente deveria responder 201, respondeu {response.status_code}"
+    assert body["id"] != existing_id, f"a visita nova deveria ter outro id, veio o mesmo da existente ({existing_id})"
+
+    # Verificar o banco: uma visita a mais no pet, a nova gravada como enviada e a existente sem mudança
+    visits_after = db.execute(COUNT_VISITS_BY_PET, (pet_id,)).fetchone()[0]
+    assert visits_after == visits_before + 1, f"o pet {pet_id} deveria ter {visits_before + 1} visitas, tem {visits_after}"
+    new_row = db.execute(SELECT_VISIT_BY_ID, (body["id"],)).fetchone()
+    assert new_row == existing_row, f"a visita nova {body['id']} deveria ser {existing_row}, é {new_row}"
+    row_after = db.execute(SELECT_VISIT_BY_ID, (existing_id,)).fetchone()
+    assert row_after == existing_row, f"a visita existente {existing_id} deveria continuar {existing_row}, é {row_after}"
