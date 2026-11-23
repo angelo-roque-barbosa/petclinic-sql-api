@@ -340,7 +340,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – validação (valor-limite) |
 | **Prioridade** | Alta |
 | **Objetivo** | Garantir que um pet não pode nascer depois de hoje. |
-| **Pré-condições** | Dono padrão e tipo criados via API. |
+| **Pré-condições** | Dono, sem pets, e tipo gravados por SQL nas fixtures `prepared_owner` e `prepared_pet_type` (tests/conftest.py). |
 | **Dados de teste** | birthDate = hoje, amanhã e 2099-01-01 (datas calculadas na hora do teste). |
 | **Passos** | 1. Para cada data, enviar POST /api/owners/{ownerId}/pets.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | Hoje: status 201 e data gravada igual.<br>Amanhã e 2099-01-01: status 400 e nenhum pet novo. |

@@ -149,6 +149,9 @@ execução; quando difere do esperado, a linha aponta o bug.
 | `name` (POST /api/owners/{id}/pets) | só espaços (o banco aceita) | `'   '` | 400, nada gravado | 201, gravado (BUG-06) |
 | `name` (POST /api/owners/{id}/pets) | no limite | 30 caracteres | 201, gravado inteiro | 201, gravado inteiro |
 | `name` (POST /api/owners/{id}/pets) | acima do limite | 31 caracteres | 400, nada gravado | 400, nada gravado |
+| `birthDate` (POST /api/owners/{id}/pets) | no limite: hoje, em UTC | data de hoje | 201, gravado igual | 201, gravado igual |
+| `birthDate` (POST /api/owners/{id}/pets) | futuro, logo depois do limite | amanhã | 400, nada gravado | 400, nada gravado |
+| `birthDate` (POST /api/owners/{id}/pets) | futuro distante (o banco aceita) | `2099-01-01` | 400, nada gravado | 400, nada gravado |
 
 ## Achados
 

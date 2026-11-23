@@ -1,6 +1,6 @@
 """Testes de pets (tabela `pets`), com o banco como oráculo."""
 
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -149,6 +149,67 @@ def test_criar_pet_com_nome_de_31_caracteres_e_recusado_sem_gravar(api, db, prep
     assert errors, "a resposta deveria listar os erros de validação"
     assert {error["field"] for error in errors} == {"name"}, (
         f"o erro deveria apontar só name, apontou {sorted({error['field'] for error in errors})}"
+    )
+
+    # Verificar o banco: o dono, criado sem pets, continua sem pets
+    pets_of_owner = db.execute(COUNT_PETS_BY_OWNER, (owner_id,)).fetchone()[0]
+    assert pets_of_owner == 0, f"o dono {owner_id} deveria continuar sem pets, tem {pets_of_owner}"
+
+
+def today_utc():
+    """Hoje no fuso da API (UTC), calculado na hora do teste."""
+    return datetime.now(timezone.utc).date()
+
+
+def test_criar_pet_nascido_hoje_grava_a_data(api, db, prepared_owner, prepared_pet_type, pets_to_delete):
+    """CT-API-PETS-05: um pet nascido hoje, o último dia permitido, é aceito e gravado com a data enviada."""
+    # Preparar: o pet padrão nascido hoje, em UTC; o dono e o tipo vêm das fixtures
+    owner_id = prepared_owner
+    birth = today_utc()
+    payload = {**PET, "birthDate": birth.isoformat(), "type": {"id": prepared_pet_type, "name": PREPARED_PET_TYPE_NAME}}
+
+    # Agir
+    response = api.post(f"/owners/{owner_id}/pets", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        pets_to_delete.append(body["id"])
+
+    # Verificar a resposta
+    assert response.status_code == 201, f"POST de pet nascido hoje ({birth}) deveria responder 201, respondeu {response.status_code}"
+
+    # Verificar o banco: a linha inteira, com a data de hoje
+    row = db.execute(SELECT_PET_BY_ID, (body["id"],)).fetchone()
+    expected = (PET["name"], birth, owner_id, prepared_pet_type)
+    assert row == expected, f"a linha do pet {body['id']} deveria ser {expected}, é {row}"
+
+
+@pytest.mark.parametrize(
+    "birth",
+    [
+        pytest.param(lambda: today_utc() + timedelta(days=1), id="amanha"),
+        pytest.param(lambda: date(2099, 1, 1), id="2099-01-01"),
+    ],
+)
+def test_criar_pet_nascido_no_futuro_e_recusado_sem_gravar(api, db, prepared_owner, prepared_pet_type, pets_to_delete, birth):
+    """CT-API-PETS-05: um pet nascido depois de hoje responde 400 apontando birthDate e não grava pet."""
+    # Preparar: a data calculada na hora do teste (por isso o parâmetro é uma função), sempre depois de hoje
+    owner_id = prepared_owner
+    birth_date = birth()
+    assert birth_date > today_utc(), "a data do teste deveria estar no futuro"
+    payload = {**PET, "birthDate": birth_date.isoformat(), "type": {"id": prepared_pet_type, "name": PREPARED_PET_TYPE_NAME}}
+
+    # Agir
+    response = api.post(f"/owners/{owner_id}/pets", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        pets_to_delete.append(body["id"])
+
+    # Verificar a resposta: 400, e o erro aponta só a data
+    assert response.status_code == 400, f"POST de pet nascido em {birth_date} deveria responder 400, respondeu {response.status_code}"
+    errors = body.get("schemaValidationErrors") or []
+    assert errors, "a resposta deveria listar os erros de validação"
+    assert {error["field"] for error in errors} == {"birthDate"}, (
+        f"o erro deveria apontar só birthDate, apontou {sorted({error['field'] for error in errors})}"
     )
 
     # Verificar o banco: o dono, criado sem pets, continua sem pets
