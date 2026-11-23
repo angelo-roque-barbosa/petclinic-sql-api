@@ -1089,6 +1089,8 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 - O contrato diverge do banco: `username` e o nome do papel aceitam até 80 caracteres no contrato, mas o banco tem `varchar(20)`; `password` não é obrigatório no contrato, mas é NOT NULL no banco.
 - Papéis que a API conhece: `ROLE_OWNER_ADMIN`, `ROLE_VET_ADMIN`, `ROLE_ADMIN`.
 - A API não tem DELETE /api/users: a limpeza apaga papéis e usuário direto no banco, no teardown, aceitando "já removido".
+- Fora da coleção do Postman (decidido em 2026-11-23): a API só tem POST /api/users (GET e DELETE em `/api/users` respondem 500), então o Postman não consegue conferir o que estes casos pedem (hash da senha, `enabled` e papéis, que só existem no banco) nem limpar o usuário criado. Como `username` é a chave primária de `users`, um usuário que sobrasse faria a rodada seguinte falhar ou acumular lixo. Os casos ficam para o pytest, que acessa o banco para conferir e para limpar.
+- Rascunho, sem registrar: GET e DELETE em `/api/users`, métodos que não existem, deveriam responder 405 e respondem 500.
 
 #### CT-API-USERS-01 — Criar usuário com papel válido
 
@@ -1220,6 +1222,8 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 ## Postman
 
 ### postman/petclinic.postman_collection.json
+
+A coleção cobre donos, pets, visitas, tipos de pet, especialidades e veterinários. Os casos que hoje falham por um bug conhecido ficam fora dela e viram casos `CT-BUG`, para a coleção continuar sem falhas conhecidas. A área de usuários fica fora por outro motivo: a API não tem como ler nem apagar usuários (ver as notas de `tests/api/test_users.py`).
 
 #### CT-API-INTEGRITY-01 — Coleção termina com os mesmos totais do início
 
