@@ -988,9 +988,9 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Pré-condições** | Especialidade criada via API. |
 | **Dados de teste** | Vet padrão com a mesma especialidade duas vezes na lista. |
 | **Passos** | 1. Enviar POST /api/vets.<br>2. Verificar a resposta e o banco. |
-| **Resultado esperado** | Status 400; nenhum vet novo e nenhuma ligação nova. |
+| **Resultado esperado** | Status 201; o veterinário é criado com uma ligação só para a especialidade repetida. |
 | **Status** | Não executado |
-| **Observações** | Dicionário: a regra `vet_specialties_vet_id_specialty_id_key` recusa a ligação repetida no banco.<br>Regra a confirmar: a alternativa é gravar uma ligação só. Em qualquer regra, nunca 500. |
+| **Observações** | Dicionário: a regra `vet_specialties_vet_id_specialty_id_key` recusa a ligação repetida no banco.<br>Regra adotada em 2026-11-23: a repetição vira uma ligação só, a alternativa que o caso já previa, porque a lista de especialidades funciona como um conjunto. Em 2026-11-23, o POST respondeu 201 com uma ligação só, e o PUT com a lista repetida também gravou uma só; nada de 500 nem gravação parcial. Na coleção do Postman: `CT-API-VETS-05`. |
 
 #### CT-API-VETS-06 — Criar veterinário com especialidade inexistente
 

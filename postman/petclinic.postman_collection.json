@@ -4405,6 +4405,52 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "CT-API-VETS-05",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Cria a especialidade que vai duas vezes na lista do veterinário\npm.sendRequest({\n  url: pm.environment.get(\"baseUrl\") + \"/specialties\",\n  method: \"POST\",\n  header: { \"Content-Type\": \"application/json\" },\n  body: { mode: \"raw\", raw: JSON.stringify({ name: \"Hidroterapia\" }) }\n}, (err, res) => {\n  if (err) throw err;\n  if (res.code !== 201) throw new Error(\"Preparação falhou: POST da especialidade devolveu \" + res.code);\n  pm.collectionVariables.set(\"dupSpecialtyId\", res.json().id);\n  pm.collectionVariables.set(\"dupSpecialtyName\", res.json().name);\n});\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.environment.get(\"baseUrl\");\nconst sent = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));\nconst body = pm.response.json();\nconst specialtyId = String(pm.collectionVariables.get(\"dupSpecialtyId\"));\n\npm.test(\"corpo enviado tem a mesma especialidade duas vezes\", () => {\n  const ids = sent.specialties.map((s) => String(s.id));\n  pm.expect(ids).to.eql([specialtyId, specialtyId]);\n});\n\npm.test(\"status 201\", () => pm.response.to.have.status(201));\n\npm.test(\"resposta traz a especialidade uma vez só\", () => {\n  pm.expect(body.specialties.map((s) => String(s.id))).to.eql([specialtyId]);\n});\n\npm.test(\"responde em menos de 500 ms\", () => {\n  pm.expect(pm.response.responseTime).to.be.below(500);\n});\n\n// Confere o que ficou gravado: uma ligação só, com essa especialidade\npm.sendRequest(base + \"/vets/\" + body.id, (err, res) => {\n  pm.test(\"veterinário gravado com uma ligação só\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(200);\n    pm.expect(res.json().specialties.map((s) => String(s.id))).to.eql([specialtyId]);\n  });\n});\n\n// Usado pela limpeza\npm.collectionVariables.set(\"dupVetId\", body.id);\n"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"firstName\": \"Bruno\",\n    \"lastName\": \"Teixeira\",\n    \"specialties\": [\n        {\n            \"id\": {{dupSpecialtyId}},\n            \"name\": \"{{dupSpecialtyName}}\"\n        },\n        {\n            \"id\": {{dupSpecialtyId}},\n            \"name\": \"{{dupSpecialtyName}}\"\n        }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vets"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -5195,6 +5241,35 @@
           ]
         },
         {
+          "name": "Limpeza: CT-API-VETS-05",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vets/{{dupVetId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vets",
+                "{{dupVetId}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Apaga o veterinário (com a ligação) antes da especialidade\nconst base = pm.environment.get(\"baseUrl\");\nconst steps = [\n  { path: \"vets\", id: pm.collectionVariables.get(\"dupVetId\"), deleted: \"veterinário apagado ou já removido\", gone: \"veterinário não existe mais\" },\n  { path: \"specialties\", id: pm.collectionVariables.get(\"dupSpecialtyId\"), deleted: \"especialidade apagada ou já removida\", gone: \"especialidade não existe mais\" }\n];\n\nfunction checkDeleted(code, step) {\n  pm.test(step.deleted + \" (204 ou 404)\", () => {\n    pm.expect(code).to.be.oneOf([204, 404]);\n  });\n}\n\nfunction confirmGone(index) {\n  const step = steps[index];\n  pm.sendRequest(base + \"/\" + step.path + \"/\" + step.id, (err, res) => {\n    pm.test(step.gone + \" (GET devolve 404)\", () => {\n      pm.expect(err).to.be.null;\n      pm.expect(res.code).to.eql(404);\n    });\n\n    const next = steps[index + 1];\n    if (!next) return;\n    pm.sendRequest({ url: base + \"/\" + next.path + \"/\" + next.id, method: \"DELETE\" }, (delErr, delRes) => {\n      if (delErr) throw delErr;\n      checkDeleted(delRes.code, next);\n      confirmGone(index + 1);\n    });\n  });\n}\n\ncheckDeleted(pm.response.code, steps[0]);\nconfirmGone(0);\n"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Limpeza: CT-API-OWNERS-03b",
           "event": [
             {
@@ -5906,6 +5981,18 @@
     },
     {
       "key": "homonymVetId",
+      "value": ""
+    },
+    {
+      "key": "dupSpecialtyId",
+      "value": ""
+    },
+    {
+      "key": "dupSpecialtyName",
+      "value": ""
+    },
+    {
+      "key": "dupVetId",
       "value": ""
     }
   ]
