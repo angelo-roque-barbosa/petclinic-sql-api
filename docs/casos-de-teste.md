@@ -415,7 +415,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – efeito no servidor |
 | **Prioridade** | Alta |
 | **Objetivo** | Garantir que a atualização grava os novos valores e mantém o dono. |
-| **Pré-condições** | Dono, dois tipos e um pet criados via API. |
+| **Pré-condições** | Dono, tipo e pet gravados por SQL na fixture `owner_with_pet`, e o segundo tipo na `second_pet_type` (tests/conftest.py). |
 | **Dados de teste** | Novo name, nova birthDate no passado e o segundo tipo. |
 | **Passos** | 1. Enviar PUT /api/owners/{ownerId}/pets/{petId} com os novos valores.<br>2. Verificar a resposta.<br>3. Conferir a linha do pet no banco. |
 | **Resultado esperado** | Passo 2: status 204.<br>Passo 3: name, birth_date e type_id novos; owner_id igual ao de antes. |

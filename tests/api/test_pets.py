@@ -4,7 +4,13 @@ from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
-from conftest import COUNT_PETS, PREPARED_PET_TYPE_NAME, SELECT_MAX_OWNER_ID, SELECT_OWNER_BY_ID
+from conftest import (
+    COUNT_PETS,
+    PREPARED_PET_TYPE_NAME,
+    SECOND_PET_TYPE_NAME,
+    SELECT_MAX_OWNER_ID,
+    SELECT_OWNER_BY_ID,
+)
 
 # Pet padrão do docs/casos-de-teste.md: nome com letras, nascimento no passado. O tipo é o da fixture.
 PET = {"name": "Rex", "birthDate": "2020-05-10"}
@@ -339,3 +345,34 @@ def test_criar_pet_com_tipo_inexistente_e_recusado_sem_gravar(api, db, prepared_
     assert pets_of_owner == 0, f"o dono {owner_id} deveria continuar sem pets, tem {pets_of_owner}"
     max_type_after = db.execute(SELECT_MAX_PET_TYPE_ID).fetchone()[0]
     assert max_type_after == max_type_before, f"nenhum tipo deveria ser criado: o maior id era {max_type_before}, ficou {max_type_after}"
+
+
+# Valores novos para o pet da fixture owner_with_pet: outro nome, outra data no passado e o segundo tipo.
+UPDATED_PET = {"name": "Bidu", "birthDate": "2019-03-15"}
+
+
+def test_atualizar_pet_com_dados_validos_grava_os_valores_e_mantem_o_dono(api, db, second_pet_type, owner_with_pet):
+    """CT-API-PETS-10: atualizar um pet com dados válidos grava o novo nome, a nova data e o novo tipo, e o pet
+    continua com o mesmo dono.
+
+    O second_pet_type vem antes do owner_with_pet: depois do PUT o pet aponta para o segundo tipo, então o pet
+    tem de ser apagado antes dele."""
+    # Preparar: o pet, o dono e o primeiro tipo vêm da fixture; o segundo tipo, da second_pet_type
+    owner_id = owner_with_pet["owner_id"]
+    pet_id = owner_with_pet["pet_id"]
+    row_before = db.execute(SELECT_PET_BY_ID, (pet_id,)).fetchone()
+    payload = {**UPDATED_PET, "type": {"id": second_pet_type, "name": SECOND_PET_TYPE_NAME}}
+    assert (payload["name"], date.fromisoformat(payload["birthDate"]), second_pet_type) != (row_before[0], row_before[1], row_before[3]), (
+        "os valores novos deveriam ser diferentes dos atuais"
+    )
+
+    # Agir
+    response = api.put(f"/owners/{owner_id}/pets/{pet_id}", json=payload)
+
+    # Verificar a resposta
+    assert response.status_code == 204, f"PUT /owners/{owner_id}/pets/{pet_id} deveria responder 204, respondeu {response.status_code}"
+
+    # Verificar o banco: nome, data e tipo novos, e o mesmo dono de antes
+    row = db.execute(SELECT_PET_BY_ID, (pet_id,)).fetchone()
+    expected = (payload["name"], date.fromisoformat(payload["birthDate"]), row_before[2], second_pet_type)
+    assert row == expected, f"a linha do pet {pet_id} deveria ser {expected}, é {row}"

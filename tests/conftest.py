@@ -131,6 +131,7 @@ SELECT MAX(id) FROM owners;
 # Dados que a fixture owner_with_pet grava direto no banco. São do próprio teste: nenhum vem do seed,
 # então a limpeza não mexe em dado do populateDB.sql.
 PREPARED_PET_TYPE_NAME = "chinchila"
+SECOND_PET_TYPE_NAME = "furão"
 PREPARED_OWNER = {
     "first_name": "Rafael",
     "last_name": "Souza",
@@ -236,6 +237,18 @@ def prepared_pet_type(db):
     """Grava direto no banco um tipo de pet e entrega o id. No fim, apaga o tipo; apagar zero linhas também
     serve, porque ele pode já ter sido removido."""
     type_id = db.execute(INSERT_PET_TYPE, (PREPARED_PET_TYPE_NAME,)).fetchone()[0]
+    yield type_id
+    db.execute(DELETE_PET_TYPE, (type_id,))
+
+
+@pytest.fixture
+def second_pet_type(db):
+    """Grava direto no banco um segundo tipo de pet e entrega o id. No fim, apaga o tipo.
+
+    Quando um pet passa a usar este tipo no teste, ele tem de ser apagado antes do tipo: peça esta fixture
+    antes da que cria o pet (por exemplo, `second_pet_type, owner_with_pet`), porque o pytest desmonta as
+    fixtures na ordem inversa em que foram pedidas."""
+    type_id = db.execute(INSERT_PET_TYPE, (SECOND_PET_TYPE_NAME,)).fetchone()[0]
     yield type_id
     db.execute(DELETE_PET_TYPE, (type_id,))
 
