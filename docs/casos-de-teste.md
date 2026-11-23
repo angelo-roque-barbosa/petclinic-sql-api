@@ -644,7 +644,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – efeito no servidor |
 | **Prioridade** | Média |
 | **Objetivo** | Garantir que a exclusão remove só a visita, mantendo o pet. |
-| **Pré-condições** | Dono, tipo, pet e uma visita criados via API. |
+| **Pré-condições** | Dono, tipo, pet e duas visitas dele gravados por SQL na fixture `pet_with_two_visits` (tests/conftest.py). A segunda visita é o controle. |
 | **Dados de teste** | Id da visita. |
 | **Passos** | 1. Enviar DELETE /api/visits/{visitId}.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | Status 2xx; nenhuma linha de `visits` com esse id; o pet continua no banco. |

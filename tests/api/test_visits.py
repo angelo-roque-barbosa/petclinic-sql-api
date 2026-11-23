@@ -4,7 +4,17 @@ from datetime import date, timedelta
 
 import pytest
 
-from conftest import COUNT_VISITS, DELETE_PET, DELETE_VISIT, INSERT_PET, PREPARED_PET, PREPARED_VISIT, today_utc
+from conftest import (
+    COUNT_VISITS,
+    DELETE_PET,
+    DELETE_VISIT,
+    INSERT_PET,
+    PREPARED_PET,
+    PREPARED_VISIT,
+    SECOND_VISIT,
+    SELECT_VISIT_PET_ID,
+    today_utc,
+)
 
 # Visita padrão: a data fica entre o nascimento do pet da fixture (2020-05-10) e hoje.
 VISIT = {"date": "2026-11-01", "description": "Consulta de rotina"}
@@ -327,3 +337,29 @@ def test_criar_visita_para_pet_inexistente_e_recusada_sem_gravar(api, db, owner_
     assert visits_after == visits_before, f"o total de visitas deveria continuar {visits_before}, ficou {visits_after}"
     control_visits = db.execute(COUNT_VISITS_BY_PET, (control_pet_id,)).fetchone()[0]
     assert control_visits == 0, f"o pet de controle {control_pet_id} deveria continuar sem visitas, tem {control_visits}"
+
+
+def test_apagar_visita_remove_so_ela_e_mantem_o_pet_com_a_outra_visita(api, db, pet_with_two_visits):
+    """CT-API-VISITS-12: apagar uma visita responde 204 e remove só a visita do id enviado; o pet continua no
+    banco, com a outra visita dele sem mudança."""
+    # Preparar: o pet e as duas visitas vêm da fixture; apaga-se a primeira, e a segunda é o controle
+    pet_id = pet_with_two_visits["pet_id"]
+    visit_id = pet_with_two_visits["visit_id"]
+    control_visit_id = pet_with_two_visits["second_visit_id"]
+    control_row = (pet_id, SECOND_VISIT["visit_date"], SECOND_VISIT["description"])
+    visits_before = db.execute(COUNT_VISITS).fetchone()[0]
+
+    # Agir
+    response = api.delete(f"/visits/{visit_id}")
+
+    # Verificar a resposta
+    assert response.status_code == 204, f"DELETE /visits/{visit_id} deveria responder 204, respondeu {response.status_code}"
+
+    # Verificar o banco: a visita não existe mais e saiu exatamente uma visita
+    assert db.execute(SELECT_VISIT_PET_ID, (visit_id,)).fetchone() is None, f"a visita {visit_id} não deveria mais existir"
+    visits_after = db.execute(COUNT_VISITS).fetchone()[0]
+    assert visits_after == visits_before - 1, f"o total de visitas deveria cair para {visits_before - 1}, ficou {visits_after}"
+
+    # a visita de controle continua igual, ligada ao pet; pela chave estrangeira de `visits`, o pet continua no banco
+    row_after = db.execute(SELECT_VISIT_BY_ID, (control_visit_id,)).fetchone()
+    assert row_after == control_row, f"a visita de controle {control_visit_id} deveria continuar {control_row}, é {row_after}"
