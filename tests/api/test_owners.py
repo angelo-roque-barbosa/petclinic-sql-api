@@ -384,3 +384,24 @@ def test_apagar_dono_com_pet_apaga_junto_o_pet_e_a_visita(api, db, owner_with_pe
     assert owners_after == owners_before - 1, f"o total de donos deveria cair para {owners_before - 1}, ficou {owners_after}"
     assert pets_after == pets_before - 1, f"o total de pets deveria cair para {pets_before - 1}, ficou {pets_after}"
     assert visits_after == visits_before - 1, f"o total de visitas deveria cair para {visits_before - 1}, ficou {visits_after}"
+
+
+# Pergunta: qual é o maior id da tabela `owners` hoje?
+# Devolve uma linha só, com um único valor: o maior id.
+SELECT_MAX_OWNER_ID = """
+SELECT MAX(id) FROM owners;
+"""
+
+
+def test_consultar_dono_inexistente_responde_404(api, db):
+    """CT-API-OWNERS-11: consultar um id numérico que não existe responde 404."""
+    # Preparar: um id que não existe, lido do banco na hora (o maior id + 1)
+    missing_id = db.execute(SELECT_MAX_OWNER_ID).fetchone()[0] + 1
+    assert db.execute(SELECT_OWNER_BY_ID, (missing_id,)).fetchone() is None, f"o id {missing_id} não deveria existir"
+
+    # Agir
+    response = api.get(f"/owners/{missing_id}")
+
+    # Verificar a resposta: 404, sem dados de dono
+    assert response.status_code == 404, f"GET /owners/{missing_id} deveria responder 404, respondeu {response.status_code}"
+    assert "firstName" not in response.text, "a resposta não deveria trazer dados de dono"
