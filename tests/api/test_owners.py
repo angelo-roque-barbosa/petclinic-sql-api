@@ -487,3 +487,33 @@ def test_criar_dono_com_id_inexistente_no_corpo_ignora_o_id(api, db, owners_to_d
     expected = (OWNER["firstName"], OWNER["lastName"], OWNER["address"], OWNER["city"], OWNER["telephone"])
     assert new_row == expected, f"a linha nova {body['id']} deveria ser {expected}, é {new_row}"
     assert db.execute(SELECT_OWNER_BY_ID, (sent_id,)).fetchone() is None, f"nenhuma linha deveria ter o id {sent_id}"
+
+
+@pytest.mark.parametrize("field", ["firstName", "lastName"])
+def test_criar_dono_com_digito_no_nome_e_recusado_sem_gravar(api, db, owners_to_delete, field):
+    """CT-API-OWNERS-14: nome ou sobrenome com dígito, com tamanho válido, responde 400 apontando o campo e
+    não grava dono."""
+    # Preparar: o dono padrão com o dígito no campo, e o total de donos antes
+    payload = {**OWNER, field: "Ana2"}
+    assert re.search(r"\d", payload[field]) and 1 <= len(payload[field]) <= 30, (
+        "o valor do teste deveria ter um dígito e tamanho válido, para isolar a regra de formato"
+    )
+    count_before = db.execute(COUNT_OWNERS).fetchone()[0]
+
+    # Agir
+    response = api.post("/owners", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        owners_to_delete.append(body["id"])
+
+    # Verificar a resposta: 400, e o erro aponta só o campo alterado
+    assert response.status_code == 400, f"POST /owners com {field}='Ana2' deveria responder 400, respondeu {response.status_code}"
+    errors = body.get("schemaValidationErrors") or []
+    assert errors, "a resposta deveria listar os erros de validação"
+    assert {error["field"] for error in errors} == {field}, (
+        f"o erro deveria apontar só {field}, apontou {sorted({error['field'] for error in errors})}"
+    )
+
+    # Verificar o banco: nenhum dono novo
+    count_after = db.execute(COUNT_OWNERS).fetchone()[0]
+    assert count_after == count_before, f"o total de donos deveria continuar {count_before}, ficou {count_after}"
