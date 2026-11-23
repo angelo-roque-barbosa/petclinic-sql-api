@@ -1035,6 +1035,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Enviar PUT /api/vets/{id}.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | Status 2xx; a linha com o mesmo id tem o novo nome; a ligação continua. |
 | **Status** | Não executado |
+| **Observações** | Em 2026-11-23, o PUT respondeu 204, a mesma linha ficou com o nome e o sobrenome novos e a ligação com a especialidade continuou. Com um `id` diferente no corpo, vale o da URL; com nome inválido, 400. Na coleção do Postman: `CT-API-VETS-08`, que cria a própria especialidade e o próprio veterinário. A lista precisa ir com a especialidade: um PUT com a lista vazia muda o nome e remove a ligação, porque o PUT troca a lista inteira (CT-API-VETS-07). |
 
 #### CT-API-VETS-09 — Apagar veterinário sem especialidade
 

@@ -4498,6 +4498,53 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "CT-API-VETS-08",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Cria uma especialidade e um veterinário com ela; depois conta os veterinários\nconst base = pm.environment.get(\"baseUrl\");\npm.collectionVariables.set(\"renameVetOldFirstName\", \"Gabriel\");\n\nfunction post(path, data, next) {\n  pm.sendRequest({\n    url: base + path,\n    method: \"POST\",\n    header: { \"Content-Type\": \"application/json\" },\n    body: { mode: \"raw\", raw: JSON.stringify(data) }\n  }, (err, res) => {\n    if (err) throw err;\n    if (res.code !== 201) throw new Error(\"Preparação falhou: POST \" + path + \" devolveu \" + res.code);\n    next(res.json());\n  });\n}\n\npost(\"/specialties\", { name: \"Dermatologia Felina\" }, (specialty) => {\n  pm.collectionVariables.set(\"renameVetSpecialtyId\", specialty.id);\n  pm.collectionVariables.set(\"renameVetSpecialtyName\", specialty.name);\n  post(\"/vets\", { firstName: pm.collectionVariables.get(\"renameVetOldFirstName\"), lastName: \"Nunes\", specialties: [specialty] }, (vet) => {\n    pm.collectionVariables.set(\"renameVetId\", vet.id);\n    pm.sendRequest(base + \"/vets\", (err, res) => {\n      if (err) throw err;\n      pm.collectionVariables.set(\"vetsCountBefore\", res.json().length);\n    });\n  });\n});\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.environment.get(\"baseUrl\");\nconst id = pm.collectionVariables.get(\"renameVetId\");\nconst oldFirstName = pm.collectionVariables.get(\"renameVetOldFirstName\");\nconst specialtyId = String(pm.collectionVariables.get(\"renameVetSpecialtyId\"));\nconst countBefore = Number(pm.collectionVariables.get(\"vetsCountBefore\"));\nconst sent = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));\n\npm.test(\"nome enviado é diferente do atual\", () => {\n  pm.expect(sent.firstName).to.not.eql(oldFirstName);\n});\n\npm.test(\"status 204\", () => pm.response.to.have.status(204));\n\npm.test(\"responde em menos de 500 ms\", () => {\n  pm.expect(pm.response.responseTime).to.be.below(500);\n});\n\n// O mesmo id passa a ter o nome novo e continua com a especialidade\npm.sendRequest(base + \"/vets/\" + id, (err, res) => {\n  pm.test(\"mesmo id com o nome novo e a mesma especialidade\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(200);\n    const vet = res.json();\n    pm.expect(vet.firstName, \"firstName\").to.eql(sent.firstName);\n    pm.expect(vet.lastName, \"lastName\").to.eql(sent.lastName);\n    pm.expect(vet.specialties.map((s) => String(s.id)), \"especialidades\").to.eql([specialtyId]);\n  });\n});\n\n// A atualização não pode criar outro veterinário\npm.sendRequest(base + \"/vets\", (err, res) => {\n  pm.test(\"quantidade de veterinários não mudou\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.json().length).to.eql(countBefore);\n  });\n});\n"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"firstName\": \"Gabriela\",\n    \"lastName\": \"Nunes Costa\",\n    \"specialties\": [\n        {\n            \"id\": {{renameVetSpecialtyId}},\n            \"name\": \"{{renameVetSpecialtyName}}\"\n        }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vets/{{renameVetId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vets",
+                "{{renameVetId}}"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -5346,6 +5393,35 @@
           ]
         },
         {
+          "name": "Limpeza: CT-API-VETS-08",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vets/{{renameVetId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vets",
+                "{{renameVetId}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Apaga o veterinário (com a ligação) antes da especialidade\nconst base = pm.environment.get(\"baseUrl\");\nconst steps = [\n  { path: \"vets\", id: pm.collectionVariables.get(\"renameVetId\"), deleted: \"veterinário apagado ou já removido\", gone: \"veterinário não existe mais\" },\n  { path: \"specialties\", id: pm.collectionVariables.get(\"renameVetSpecialtyId\"), deleted: \"especialidade apagada ou já removida\", gone: \"especialidade não existe mais\" }\n];\n\nfunction checkDeleted(code, step) {\n  pm.test(step.deleted + \" (204 ou 404)\", () => {\n    pm.expect(code).to.be.oneOf([204, 404]);\n  });\n}\n\nfunction confirmGone(index) {\n  const step = steps[index];\n  pm.sendRequest(base + \"/\" + step.path + \"/\" + step.id, (err, res) => {\n    pm.test(step.gone + \" (GET devolve 404)\", () => {\n      pm.expect(err).to.be.null;\n      pm.expect(res.code).to.eql(404);\n    });\n\n    const next = steps[index + 1];\n    if (!next) return;\n    pm.sendRequest({ url: base + \"/\" + next.path + \"/\" + next.id, method: \"DELETE\" }, (delErr, delRes) => {\n      if (delErr) throw delErr;\n      checkDeleted(delRes.code, next);\n      confirmGone(index + 1);\n    });\n  });\n}\n\ncheckDeleted(pm.response.code, steps[0]);\nconfirmGone(0);\n"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Limpeza: CT-API-OWNERS-03b",
           "event": [
             {
@@ -6097,6 +6173,22 @@
     },
     {
       "key": "swapControlVetId",
+      "value": ""
+    },
+    {
+      "key": "renameVetId",
+      "value": ""
+    },
+    {
+      "key": "renameVetOldFirstName",
+      "value": ""
+    },
+    {
+      "key": "renameVetSpecialtyId",
+      "value": ""
+    },
+    {
+      "key": "renameVetSpecialtyName",
       "value": ""
     }
   ]
