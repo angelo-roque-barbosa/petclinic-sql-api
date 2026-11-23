@@ -261,6 +261,16 @@ def prepared_pet_type(db):
 
 
 @pytest.fixture
+def pet_types_to_delete(db):
+    """Lista de ids de tipos de pet criados pela API no teste. No fim, cada um é apagado por SQL; apagar zero
+    linhas também serve, porque o tipo pode já ter sido removido."""
+    ids = []
+    yield ids
+    for type_id in ids:
+        db.execute(DELETE_PET_TYPE, (type_id,))
+
+
+@pytest.fixture
 def second_pet_type(db):
     """Grava direto no banco um segundo tipo de pet e entrega o id. No fim, apaga o tipo.
 
