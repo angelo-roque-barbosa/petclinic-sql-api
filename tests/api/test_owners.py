@@ -405,3 +405,34 @@ def test_consultar_dono_inexistente_responde_404(api, db):
     # Verificar a resposta: 404, sem dados de dono
     assert response.status_code == 404, f"GET /owners/{missing_id} deveria responder 404, respondeu {response.status_code}"
     assert "firstName" not in response.text, "a resposta não deveria trazer dados de dono"
+
+
+# Pergunta: quais são os ids dos donos cujo last_name casa com um padrão de texto?
+# Recebe o padrão como parâmetro (%s), por exemplo 'Zylber%' (o teste já manda com o %), e devolve
+# uma linha por dono, cada uma com um valor só: o id.
+SELECT_OWNER_IDS_BY_LAST_NAME_PATTERN = """
+SELECT id FROM owners WHERE last_name LIKE %s;
+"""
+
+
+def test_buscar_donos_por_sobrenome_devolve_os_que_comecam_com_o_termo(api, db, owner_factory):
+    """CT-API-OWNERS-12: a busca por sobrenome devolve exatamente os donos do banco cujo sobrenome começa
+    com o termo, e não os que só o contêm no meio."""
+    # Preparar: dois donos com o prefixo único e um que só o contém no meio, gravados por SQL
+    prefix = "Zylber"
+    starts_with = {owner_factory(last_name="Zylberman"), owner_factory(last_name="Zylberstein")}
+    contains_only = owner_factory(last_name="Azylber")
+
+    # Agir
+    response = api.get("/owners", params={"lastName": prefix})
+
+    # Verificar a resposta
+    assert response.status_code == 200, f"GET /owners?lastName={prefix} deveria responder 200, respondeu {response.status_code}"
+    response_ids = {owner["id"] for owner in response.json()}
+
+    # Verificar contra o banco: o conjunto esperado vem do banco, não da resposta
+    rows = db.execute(SELECT_OWNER_IDS_BY_LAST_NAME_PATTERN, (prefix + "%",)).fetchall()
+    db_ids = {row[0] for row in rows}
+    assert db_ids == starts_with, f"o banco deveria ter só os donos criados com o prefixo {sorted(starts_with)}, tem {sorted(db_ids)}"
+    assert response_ids == db_ids, f"a busca deveria devolver {sorted(db_ids)}, devolveu {sorted(response_ids)}"
+    assert contains_only not in response_ids, "a busca não deveria devolver quem só contém o termo no meio do sobrenome"

@@ -216,7 +216,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – positivo |
 | **Prioridade** | Média |
 | **Objetivo** | Garantir que a busca devolve exatamente os donos do banco cujo sobrenome começa com o termo. |
-| **Pré-condições** | Dois donos com sobrenome começando pelo mesmo prefixo único e um com outro sobrenome, criados via API. |
+| **Pré-condições** | Dois donos com sobrenome começando pelo mesmo prefixo único e um que só contém o prefixo no meio, gravados por SQL pela fixture `owner_factory` (tests/conftest.py). |
 | **Dados de teste** | Prefixo único do sobrenome. |
 | **Passos** | 1. Enviar GET /api/owners?lastName=&lt;prefixo&gt;.<br>2. Buscar no banco os ids de `owners` com last_name começando pelo prefixo.<br>3. Comparar os ids da resposta com os do banco. |
 | **Resultado esperado** | Status 200 e o mesmo conjunto de ids nos dois lados (os dois donos do prefixo, sem o terceiro). |

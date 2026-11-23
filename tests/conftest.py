@@ -189,6 +189,27 @@ def prepared_owner(db):
 
 
 @pytest.fixture
+def owner_factory(db):
+    """Fábrica de donos gravados direto no banco: owner_factory(last_name="Lima") cria um dono com os dados
+    de PREPARED_OWNER e o sobrenome pedido, e devolve o id. No fim, apaga todos os que criou; apagar zero
+    linhas também serve."""
+    created = []
+
+    def create(**overrides):
+        owner = {**PREPARED_OWNER, **overrides}
+        owner_id = db.execute(
+            INSERT_OWNER,
+            (owner["first_name"], owner["last_name"], owner["address"], owner["city"], owner["telephone"]),
+        ).fetchone()[0]
+        created.append(owner_id)
+        return owner_id
+
+    yield create
+    for owner_id in created:
+        db.execute(DELETE_OWNER, (owner_id,))
+
+
+@pytest.fixture
 def owner_with_pet(db, prepared_owner):
     """Acrescenta ao dono da fixture prepared_owner um tipo de pet e um pet desse dono, gravados direto no
     banco, e entrega os ids.
