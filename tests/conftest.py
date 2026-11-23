@@ -161,20 +161,29 @@ DELETE FROM types WHERE id = %s;
 
 
 @pytest.fixture
-def owner_with_pet(db):
-    """Grava direto no banco um tipo de pet, um dono e um pet desse dono, e entrega os ids.
+def prepared_owner(db):
+    """Grava direto no banco um dono, sem pets, e entrega o id. No fim, apaga o dono; apagar zero linhas
+    também serve, porque ele pode já ter sido removido."""
+    owner = PREPARED_OWNER
+    owner_id = db.execute(
+        INSERT_OWNER,
+        (owner["first_name"], owner["last_name"], owner["address"], owner["city"], owner["telephone"]),
+    ).fetchone()[0]
+    yield owner_id
+    db.execute(DELETE_OWNER, (owner_id,))
 
-    No fim, apaga os três na ordem das chaves estrangeiras (pet, dono, tipo). Apagar zero linhas também
-    serve, porque o registro pode já ter sido removido. Se a preparação parar no meio, apaga o que chegou
-    a ser criado."""
-    created = {}
+
+@pytest.fixture
+def owner_with_pet(db, prepared_owner):
+    """Acrescenta ao dono da fixture prepared_owner um tipo de pet e um pet desse dono, gravados direto no
+    banco, e entrega os ids.
+
+    No fim, apaga o pet e o tipo; o dono é apagado depois, pela prepared_owner, porque o pytest desmonta
+    primeiro a fixture que depende da outra. Apagar zero linhas também serve, e, se a preparação parar no
+    meio, só o que chegou a ser criado é apagado."""
+    created = {"owner_id": prepared_owner}
     try:
         created["type_id"] = db.execute(INSERT_PET_TYPE, (PREPARED_PET_TYPE_NAME,)).fetchone()[0]
-        owner = PREPARED_OWNER
-        created["owner_id"] = db.execute(
-            INSERT_OWNER,
-            (owner["first_name"], owner["last_name"], owner["address"], owner["city"], owner["telephone"]),
-        ).fetchone()[0]
         created["pet_id"] = db.execute(
             INSERT_PET,
             (PREPARED_PET["name"], PREPARED_PET["birth_date"], created["type_id"], created["owner_id"]),
@@ -183,7 +192,5 @@ def owner_with_pet(db):
     finally:
         if "pet_id" in created:
             db.execute(DELETE_PET, (created["pet_id"],))
-        if "owner_id" in created:
-            db.execute(DELETE_OWNER, (created["owner_id"],))
         if "type_id" in created:
             db.execute(DELETE_PET_TYPE, (created["type_id"],))

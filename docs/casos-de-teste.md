@@ -173,7 +173,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – efeito no servidor |
 | **Prioridade** | Média |
 | **Objetivo** | Garantir que a exclusão remove a linha do banco. |
-| **Pré-condições** | Dono padrão sem pets, criado via API. |
+| **Pré-condições** | Dono sem pets gravado por SQL na fixture `prepared_owner` (tests/conftest.py). |
 | **Dados de teste** | Id do dono criado. |
 | **Passos** | 1. Enviar DELETE /api/owners/{id}.<br>2. Verificar a resposta.<br>3. Buscar a linha no banco. |
 | **Resultado esperado** | Passo 2: status 2xx.<br>Passo 3: nenhuma linha com esse id. |

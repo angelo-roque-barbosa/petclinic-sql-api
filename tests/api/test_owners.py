@@ -314,3 +314,22 @@ def test_atualizar_dono_com_telefone_invalido_e_recusado_sem_mudar_a_linha(api, 
     # Verificar o banco: a linha inteira igual à de antes, nem o telefone nem os outros campos mudaram
     row_after = db.execute(SELECT_OWNER_BY_ID, (owner_id,)).fetchone()
     assert row_after == row_before, f"a linha do dono {owner_id} deveria continuar {row_before}, ficou {row_after}"
+
+
+def test_apagar_dono_sem_pets_remove_a_linha(api, db, prepared_owner):
+    """CT-API-OWNERS-09: apagar um dono sem pets responde 204 e remove só a linha dele."""
+    # Preparar: o dono vem da fixture, gravado por SQL; aqui só o total de donos antes
+    owner_id = prepared_owner
+    count_before = db.execute(COUNT_OWNERS).fetchone()[0]
+
+    # Agir
+    response = api.delete(f"/owners/{owner_id}")
+
+    # Verificar a resposta
+    assert response.status_code == 204, f"DELETE /owners/{owner_id} deveria responder 204, respondeu {response.status_code}"
+
+    # Verificar o banco: a linha do dono não existe mais, e saiu exatamente um dono
+    row = db.execute(SELECT_OWNER_BY_ID, (owner_id,)).fetchone()
+    assert row is None, f"o dono {owner_id} não deveria mais existir no banco, mas existe: {row}"
+    count_after = db.execute(COUNT_OWNERS).fetchone()[0]
+    assert count_after == count_before - 1, f"o total de donos deveria cair para {count_before - 1}, ficou {count_after}"
