@@ -145,7 +145,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – efeito no servidor |
 | **Prioridade** | Alta |
 | **Objetivo** | Garantir que a atualização grava os novos valores na mesma linha, sem criar outro dono nem mexer nos pets. |
-| **Pré-condições** | Dono padrão com um pet, criados via API. |
+| **Pré-condições** | Tipo, dono e pet desse dono gravados por SQL na fixture `owner_with_pet` (tests/conftest.py), apagados por SQL no fim. |
 | **Dados de teste** | Novos valores para todos os campos do dono. |
 | **Passos** | 1. Enviar PUT /api/owners/{id} com os novos valores.<br>2. Verificar a resposta.<br>3. Conferir no banco a linha do dono, a contagem de `owners` e o pet. |
 | **Resultado esperado** | Passo 2: status 2xx.<br>Passo 3: a linha com o mesmo id tem os novos valores; a contagem de `owners` não mudou; o pet continua com o mesmo owner_id. |

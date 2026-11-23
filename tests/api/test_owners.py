@@ -242,3 +242,46 @@ def test_criar_dono_com_nome_de_31_letras_e_recusado_sem_gravar(api, db, owners_
     # Verificar o banco: nenhum dono novo
     count_after = db.execute(COUNT_OWNERS).fetchone()[0]
     assert count_after == count_before, f"o total de donos deveria continuar {count_before}, ficou {count_after}"
+
+
+# Valores novos para todos os campos do dono preparado pela fixture owner_with_pet.
+UPDATED_OWNER = {
+    "firstName": "Rafaela",
+    "lastName": "Souza Lima",
+    "address": "Avenida Boa Viagem, 1000",
+    "city": "Olinda",
+    "telephone": "8133334444",
+}
+
+# Pergunta: qual é o dono (owner_id) do pet com um id?
+# Recebe o id do pet (%s) e devolve uma linha com um valor só: o owner_id.
+SELECT_PET_OWNER_ID = """
+SELECT owner_id FROM pets WHERE id = %s;
+"""
+
+
+def test_atualizar_dono_com_dados_validos_grava_na_mesma_linha_e_mantem_o_pet(api, db, owner_with_pet):
+    """CT-API-OWNERS-07: atualizar um dono com dados válidos grava os novos valores na mesma linha,
+    sem criar outro dono nem mexer no pet dele."""
+    # Preparar: o dono e o pet vêm da fixture, gravados por SQL; aqui só o total de donos antes
+    owner_id = owner_with_pet["owner_id"]
+    pet_id = owner_with_pet["pet_id"]
+    count_before = db.execute(COUNT_OWNERS).fetchone()[0]
+
+    # Agir
+    response = api.put(f"/owners/{owner_id}", json=UPDATED_OWNER)
+
+    # Verificar a resposta
+    assert response.status_code == 204, f"PUT /owners/{owner_id} deveria responder 204, respondeu {response.status_code}"
+
+    # Verificar o banco: os valores novos na mesma linha, nenhum dono a mais e o pet com o mesmo dono
+    row = db.execute(SELECT_OWNER_BY_ID, (owner_id,)).fetchone()
+    expected = (
+        UPDATED_OWNER["firstName"], UPDATED_OWNER["lastName"], UPDATED_OWNER["address"],
+        UPDATED_OWNER["city"], UPDATED_OWNER["telephone"],
+    )
+    assert row == expected, f"a linha do dono {owner_id} deveria ser {expected}, é {row}"
+    count_after = db.execute(COUNT_OWNERS).fetchone()[0]
+    assert count_after == count_before, f"o total de donos deveria continuar {count_before}, ficou {count_after}"
+    pet_owner = db.execute(SELECT_PET_OWNER_ID, (pet_id,)).fetchone()
+    assert pet_owner == (owner_id,), f"o pet {pet_id} deveria continuar com o dono {owner_id}, está com {pet_owner}"
