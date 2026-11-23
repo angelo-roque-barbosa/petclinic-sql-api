@@ -1,5 +1,7 @@
 """Testes de donos (tabela `owners`), com o banco como oráculo."""
 
+import re
+
 import pytest
 
 # Dono padrão do docs/casos-de-teste.md: nome e sobrenome só com letras, telefone com 10 dígitos.
@@ -112,6 +114,41 @@ def test_criar_dono_com_telefone_fora_do_limite_e_recusado_sem_gravar(api, db, o
 
     # Verificar a resposta: 400, e o erro aponta só o telefone
     assert response.status_code == 400, f"POST /owners com {len(telephone)} dígitos deveria responder 400, respondeu {response.status_code}"
+    errors = body.get("schemaValidationErrors") or []
+    assert errors, "a resposta deveria listar os erros de validação"
+    assert {error["field"] for error in errors} == {"telephone"}, (
+        f"o erro deveria apontar só telephone, apontou {sorted({error['field'] for error in errors})}"
+    )
+
+    # Verificar o banco: nenhum dono novo
+    count_after = db.execute(COUNT_OWNERS).fetchone()[0]
+    assert count_after == count_before, f"o total de donos deveria continuar {count_before}, ficou {count_after}"
+
+
+@pytest.mark.parametrize(
+    "telephone",
+    [
+        pytest.param("abc", id="letras"),
+        pytest.param("60855510ab", id="10-caracteres-com-letras"),
+        pytest.param("608 555 10", id="10-caracteres-com-espacos"),
+        pytest.param("", id="vazio"),
+    ],
+)
+def test_criar_dono_com_telefone_fora_do_formato_e_recusado_sem_gravar(api, db, owners_to_delete, telephone):
+    """CT-API-OWNERS-04: telefone que não é só dígitos, ou vazio, responde 400 apontando telephone e não grava dono."""
+    # Preparar: o dono padrão com o telefone fora do formato, e o total de donos antes
+    payload = {**OWNER, "telephone": telephone}
+    assert not re.fullmatch(r"[0-9]{10}", telephone), "o telefone do teste não deveria ser um telefone válido"
+    count_before = db.execute(COUNT_OWNERS).fetchone()[0]
+
+    # Agir
+    response = api.post("/owners", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        owners_to_delete.append(body["id"])
+
+    # Verificar a resposta: 400, e o erro aponta só o telefone
+    assert response.status_code == 400, f"POST /owners com telefone {telephone!r} deveria responder 400, respondeu {response.status_code}"
     errors = body.get("schemaValidationErrors") or []
     assert errors, "a resposta deveria listar os erros de validação"
     assert {error["field"] for error in errors} == {"telephone"}, (

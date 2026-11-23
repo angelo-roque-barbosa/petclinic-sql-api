@@ -129,6 +129,10 @@ execução; quando difere do esperado, a linha aponta o bug.
 | `telephone` (POST /api/owners) | abaixo do limite | 9 dígitos (`819999000`) | 400, nada gravado | 400, nada gravado |
 | `telephone` (POST /api/owners) | no limite | 10 dígitos (`8199990002`) | 201, gravado igual | 201, gravado igual |
 | `telephone` (POST /api/owners) | acima do limite (o banco tem `varchar(10)`) | 11 dígitos (`81999900021`) | 400, nada gravado | 400, nada gravado |
+| `telephone` (POST /api/owners) | não numérico | `abc` | 400, nada gravado | 400, nada gravado |
+| `telephone` (POST /api/owners) | 10 caracteres, com letras | `60855510ab` | 400, nada gravado | 400, nada gravado |
+| `telephone` (POST /api/owners) | 10 caracteres, com espaços | `608 555 10` | 400, nada gravado | 400, nada gravado |
+| `telephone` (POST /api/owners) | vazio (o `NOT NULL` do banco não barra) | `''` | 400, nada gravado | 400, nada gravado |
 
 ## Achados
 
