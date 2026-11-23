@@ -975,7 +975,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Enviar POST /api/vets com o mesmo nome e sobrenome.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | Status 2xx; duas linhas com esse nome, com ids diferentes; a primeira sem alteração. |
 | **Status** | Não executado |
-| **Observações** | Exceção à regra geral de recusa: pessoas diferentes podem ter o mesmo nome.<br>Dicionário: o banco aceita (sem UNIQUE).<br>Regra a confirmar. |
+| **Observações** | Exceção à regra geral de recusa: pessoas diferentes podem ter o mesmo nome.<br>Dicionário: o banco aceita (sem UNIQUE).<br>Regra adotada em 2026-11-23: homônimos são permitidos, porque um veterinário é uma pessoa, não um item de catálogo como tipo e especialidade (BUG-14 e BUG-15). Em 2026-11-23, o segundo POST respondeu 201 com outro id e o primeiro ficou intacto; `James Carter`, do seed, também ganhou um homônimo. Na coleção do Postman: `CT-API-VETS-04`, que cria o primeiro com o mesmo corpo do request. |
 
 #### CT-API-VETS-05 — Criar veterinário com especialidade repetida na lista
 

@@ -4359,6 +4359,52 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "CT-API-VETS-04",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Cria o primeiro veterinário com o mesmo corpo deste request; o request cria o homônimo\npm.sendRequest({\n  url: pm.variables.replaceIn(pm.request.url.toString()),\n  method: \"POST\",\n  header: { \"Content-Type\": \"application/json\" },\n  body: { mode: \"raw\", raw: pm.variables.replaceIn(pm.request.body.raw) }\n}, (err, res) => {\n  if (err) throw err;\n  if (res.code !== 201) throw new Error(\"Preparação falhou: primeiro POST do veterinário devolveu \" + res.code);\n  pm.collectionVariables.set(\"firstHomonymVetId\", res.json().id);\n});\n"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.environment.get(\"baseUrl\");\nconst firstId = pm.collectionVariables.get(\"firstHomonymVetId\");\nconst sent = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));\nconst body = pm.response.json();\n\npm.test(\"status 201\", () => pm.response.to.have.status(201));\n\npm.test(\"veterinário novo, com id diferente do primeiro\", () => {\n  pm.expect(body.id).to.be.a(\"number\");\n  pm.expect(String(body.id)).to.not.eql(String(firstId));\n});\n\npm.test(\"nome e sobrenome na resposta iguais aos enviados\", () => {\n  pm.expect(body.firstName, \"firstName\").to.eql(sent.firstName);\n  pm.expect(body.lastName, \"lastName\").to.eql(sent.lastName);\n});\n\npm.test(\"responde em menos de 500 ms\", () => {\n  pm.expect(pm.response.responseTime).to.be.below(500);\n});\n\n// Os dois homônimos têm de existir: nenhum sobrescrito, nenhum descartado\npm.sendRequest(base + \"/vets\", (err, res) => {\n  pm.test(\"existem os dois homônimos, o primeiro e o novo\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(200);\n    const same = res.json()\n      .filter((v) => v.firstName === sent.firstName && v.lastName === sent.lastName)\n      .map((v) => String(v.id))\n      .sort();\n    pm.expect(same).to.eql([String(firstId), String(body.id)].sort());\n  });\n});\n\n// Veterinário criado por este request, para apagar no fim do fluxo\npm.collectionVariables.set(\"homonymVetId\", body.id);\n"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"firstName\": \"Carla\",\n    \"lastName\": \"Mendes\",\n    \"specialties\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/vets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vets"
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -5120,6 +5166,35 @@
           ]
         },
         {
+          "name": "Limpeza: CT-API-VETS-04",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/vets/{{homonymVetId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "vets",
+                "{{homonymVetId}}"
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Apaga os dois homônimos: o deste request (na URL) e o criado no Before request\nconst base = pm.environment.get(\"baseUrl\");\nconst url = pm.variables.replaceIn(pm.request.url.toString());\nconst firstUrl = base + \"/vets/\" + pm.collectionVariables.get(\"firstHomonymVetId\");\n\n// \"Já removido\" também é sucesso para uma limpeza\npm.test(\"segundo veterinário apagado ou já removido (204 ou 404)\", () => {\n  pm.expect(pm.response.code).to.be.oneOf([204, 404]);\n});\n\npm.sendRequest(url, (err, res) => {\n  pm.test(\"segundo veterinário não existe mais (GET devolve 404)\", () => {\n    pm.expect(err).to.be.null;\n    pm.expect(res.code).to.eql(404);\n  });\n\n  pm.sendRequest({ url: firstUrl, method: \"DELETE\" }, (delErr, delRes) => {\n    pm.test(\"primeiro veterinário apagado ou já removido (204 ou 404)\", () => {\n      pm.expect(delErr).to.be.null;\n      pm.expect(delRes.code).to.be.oneOf([204, 404]);\n    });\n\n    pm.sendRequest(firstUrl, (getErr, getRes) => {\n      pm.test(\"primeiro veterinário não existe mais (GET devolve 404)\", () => {\n        pm.expect(getErr).to.be.null;\n        pm.expect(getRes.code).to.eql(404);\n      });\n    });\n  });\n});\n"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Limpeza: CT-API-OWNERS-03b",
           "event": [
             {
@@ -5823,6 +5898,14 @@
     },
     {
       "key": "limitVetId",
+      "value": ""
+    },
+    {
+      "key": "firstHomonymVetId",
+      "value": ""
+    },
+    {
+      "key": "homonymVetId",
       "value": ""
     }
   ]
