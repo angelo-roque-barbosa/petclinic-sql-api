@@ -121,11 +121,14 @@ O banco permite todos os casos acima; nos dados atuais só aparecem os pets anti
 
 ## Partições e valores-limite
 
-> Preencher na fase 4.
+Valores-limite e partições testados no pytest, com `pytest.mark.parametrize`. "Obtido" é o resultado da última
+execução; quando difere do esperado, a linha aponta o bug.
 
 | Campo | Partição / limite | Valor | Esperado | Obtido |
 |-------|-------------------|-------|----------|--------|
-|       |                   |       |          |        |
+| `telephone` (POST /api/owners) | abaixo do limite | 9 dígitos (`819999000`) | 400, nada gravado | 400, nada gravado |
+| `telephone` (POST /api/owners) | no limite | 10 dígitos (`8199990002`) | 201, gravado igual | 201, gravado igual |
+| `telephone` (POST /api/owners) | acima do limite (o banco tem `varchar(10)`) | 11 dígitos (`81999900021`) | 400, nada gravado | 400, nada gravado |
 
 ## Achados
 

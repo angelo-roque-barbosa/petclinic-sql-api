@@ -70,3 +70,54 @@ def test_criar_dono_sem_campo_obrigatorio_e_recusado_sem_gravar(api, db, owners_
     # Verificar o banco: nenhum dono novo
     count_after = db.execute(COUNT_OWNERS).fetchone()[0]
     assert count_after == count_before, f"o total de donos deveria continuar {count_before}, ficou {count_after}"
+
+
+def test_criar_dono_com_telefone_de_10_digitos_grava_o_telefone(api, db, owners_to_delete):
+    """CT-API-OWNERS-03: telefone com exatamente 10 dígitos, o limite do contrato, é aceito e gravado igual."""
+    # Preparar: o dono padrão com o telefone no limite
+    payload = {**OWNER, "telephone": "8199990002"}
+    assert payload["telephone"].isdigit() and len(payload["telephone"]) == 10, "o telefone do teste deveria ter 10 dígitos"
+
+    # Agir
+    response = api.post("/owners", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        owners_to_delete.append(body["id"])
+
+    # Verificar a resposta
+    assert response.status_code == 201, f"POST /owners com 10 dígitos deveria responder 201, respondeu {response.status_code}"
+
+    # Verificar o banco: a linha inteira, com o telefone enviado
+    row = db.execute(SELECT_OWNER_BY_ID, (body["id"],)).fetchone()
+    expected = (payload["firstName"], payload["lastName"], payload["address"], payload["city"], payload["telephone"])
+    assert row == expected, f"a linha gravada deveria ser {expected}, é {row}"
+
+
+@pytest.mark.parametrize(
+    "telephone",
+    [pytest.param("819999000", id="9-digitos"), pytest.param("81999900021", id="11-digitos")],
+)
+def test_criar_dono_com_telefone_fora_do_limite_e_recusado_sem_gravar(api, db, owners_to_delete, telephone):
+    """CT-API-OWNERS-03: telefone com 9 ou 11 dígitos responde 400 apontando telephone e não grava dono."""
+    # Preparar: o dono padrão com o telefone fora do limite, e o total de donos antes
+    payload = {**OWNER, "telephone": telephone}
+    assert telephone.isdigit() and len(telephone) != 10, "o telefone do teste deveria ter só dígitos, mas não 10"
+    count_before = db.execute(COUNT_OWNERS).fetchone()[0]
+
+    # Agir
+    response = api.post("/owners", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        owners_to_delete.append(body["id"])
+
+    # Verificar a resposta: 400, e o erro aponta só o telefone
+    assert response.status_code == 400, f"POST /owners com {len(telephone)} dígitos deveria responder 400, respondeu {response.status_code}"
+    errors = body.get("schemaValidationErrors") or []
+    assert errors, "a resposta deveria listar os erros de validação"
+    assert {error["field"] for error in errors} == {"telephone"}, (
+        f"o erro deveria apontar só telephone, apontou {sorted({error['field'] for error in errors})}"
+    )
+
+    # Verificar o banco: nenhum dono novo
+    count_after = db.execute(COUNT_OWNERS).fetchone()[0]
+    assert count_after == count_before, f"o total de donos deveria continuar {count_before}, ficou {count_after}"
