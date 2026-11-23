@@ -1237,8 +1237,8 @@ A coleção cobre donos, pets, visitas, tipos de pet, especialidades e veteriná
 | **Dados de teste** | Totais de GET /api/owners, /api/pets, /api/pettypes, /api/visits, /api/specialties e /api/vets (os dois últimos desde 2026-11-22). |
 | **Passos** | 1. `CT-API-INTEGRITY-01a` (pasta Início): guardar os seis totais antes de qualquer outro request.<br>2. Executar os demais requests e as limpezas.<br>3. `CT-API-INTEGRITY-01b` (pasta Fim): ler os seis totais de novo e comparar. |
 | **Resultado esperado** | Passo 1: as seis leituras respondem 200 com uma lista.<br>Passo 3: cada total é igual ao do passo 1. |
-| **Resultado obtido** | Os quatro totais iguais aos do início, com 68 asserções e 0 falhas no Newman. |
-| **Status** | Passou em 2026-11-18 |
+| **Resultado obtido** | Os seis totais iguais aos do início, com a coleção inteira: 512 requests e 653 asserções, 0 falhas, no Newman local e no GitHub Actions. |
+| **Status** | Passou em 2026-11-23 |
 | **Observações** | A leitura é feita pela API, porque o Postman não acessa o banco. A comparação pega linha sobrando ou faltando, mas não um registro alterado com o total igual, como no BUG-04. Falha simulada em cópias da coleção: sem a limpeza do dono do 03b (`owners` 11 em vez de 10), sem a limpeza do tipo (`pettypes` 7 em vez de 6), com os totais iniciais alterados e sem o request inicial. Em 2026-11-22, com specialties e vets incluídos: sem a limpeza da especialidade do CT-API-SPECIALTIES-01, `specialties` 4 em vez de 3; com a versão antiga, de quatro totais, a mesma sobra passava sem falha. |
 
 ## Bugs conhecidos

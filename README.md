@@ -3,7 +3,7 @@
 Testes de API e de integridade de dados para o [Spring PetClinic REST](https://github.com/spring-petclinic/spring-petclinic-rest).
 O banco é o oráculo: cada teste chama a API e confere o efeito direto no PostgreSQL.
 
-> Status: em construção. Fase atual: **3 — Postman**.
+> Status: em construção. Fase atual: **4 — pytest com banco como oráculo**.
 
 ## Stack
 
@@ -52,7 +52,7 @@ Núcleo (fases 0 a 4): já forma um projeto completo. Complemento (fases 5 a 8):
 - [x] **0. Repositório:** estrutura de pastas, `.gitignore`, este README, primeiro commit.
 - [x] **1. Ambiente:** `docker-compose.yml` com API e PostgreSQL; ler o `initDB.sql`; escrever `docs/dicionario-de-dados.md`.
 - [x] **2. SQL exploratório:** de 10 a 15 consultas de integridade em `sql/`.
-- [ ] **3. Postman:** CRUD de donos, pets e visitas com testes de status e corpo; Newman no GitHub Actions.
+- [x] **3. Postman:** CRUD de donos, pets e visitas com testes de status e corpo; Newman no GitHub Actions.
 - [ ] **4. pytest com banco como oráculo:** chamada na API e verificação no banco; valor-limite e partição.
 - [ ] **5. Contrato:** respostas validadas contra o OpenAPI da aplicação.
 - [ ] **6. BDD:** de 5 a 8 cenários Gherkin para "agendar visita"; 2 ou 3 automatizados.
