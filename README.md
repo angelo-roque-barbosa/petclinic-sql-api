@@ -157,6 +157,8 @@ execução; quando difere do esperado, a linha aponta o bug.
 | `birthDate` (POST /api/owners/{id}/pets) | antiga demais (o banco aceita) | `1800-01-01` | 400, nada gravado | 400, nada gravado |
 | `description` (POST de visita) | vazia (o banco aceita) | `''` | 400, nada gravado | 400, nada gravado |
 | `description` (POST de visita) | só espaços (o banco aceita) | `'   '` | 400, nada gravado | 201, gravada (BUG-11) |
+| `description` (POST de visita) | no limite (no banco, `text` sem limite) | 255 caracteres | 201, gravada inteira | 201, gravada inteira |
+| `description` (POST de visita) | acima do limite | 256 caracteres | 400, nada gravado | 400, nada gravado |
 
 ## Achados
 

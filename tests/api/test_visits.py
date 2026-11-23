@@ -101,3 +101,53 @@ def test_criar_visita_com_descricao_vazia_e_recusada_sem_gravar(api, db, owner_w
     # Verificar o banco: o pet, criado sem visitas, continua sem visitas
     visits_of_pet = db.execute(COUNT_VISITS_BY_PET, (pet_id,)).fetchone()[0]
     assert visits_of_pet == 0, f"o pet {pet_id} deveria continuar sem visitas, tem {visits_of_pet}"
+
+
+def test_criar_visita_com_descricao_de_255_caracteres_grava_inteira(api, db, owner_with_pet, visits_to_delete):
+    """CT-API-VISITS-04: descrição com 255 caracteres, o limite do contrato, é aceita e gravada inteira."""
+    # Preparar: a visita padrão com a descrição no limite; o dono e o pet vêm da fixture
+    owner_id = owner_with_pet["owner_id"]
+    pet_id = owner_with_pet["pet_id"]
+    payload = {**VISIT, "description": "a" * 255}
+    assert len(payload["description"]) == 255, "a descrição do teste deveria ter 255 caracteres"
+
+    # Agir
+    response = api.post(f"/owners/{owner_id}/pets/{pet_id}/visits", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        visits_to_delete.append(body["id"])
+
+    # Verificar a resposta
+    assert response.status_code == 201, f"POST de visita com descrição de 255 caracteres deveria responder 201, respondeu {response.status_code}"
+
+    # Verificar o banco: a linha inteira, com a descrição de 255 caracteres sem corte
+    row = db.execute(SELECT_VISIT_BY_ID, (body["id"],)).fetchone()
+    expected = (pet_id, date.fromisoformat(payload["date"]), payload["description"])
+    assert row == expected, f"a linha da visita {body['id']} deveria ter a descrição de 255 caracteres, tem {len(row[2]) if row else None}"
+
+
+def test_criar_visita_com_descricao_de_256_caracteres_e_recusada_sem_gravar(api, db, owner_with_pet, visits_to_delete):
+    """CT-API-VISITS-04: descrição com 256 caracteres, um acima do limite, responde 400 e não grava visita."""
+    # Preparar: a visita padrão com a descrição acima do limite; o dono e o pet, sem visitas, vêm da fixture
+    owner_id = owner_with_pet["owner_id"]
+    pet_id = owner_with_pet["pet_id"]
+    payload = {**VISIT, "description": "a" * 256}
+    assert len(payload["description"]) == 256, "a descrição do teste deveria ter 256 caracteres"
+
+    # Agir
+    response = api.post(f"/owners/{owner_id}/pets/{pet_id}/visits", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        visits_to_delete.append(body["id"])
+
+    # Verificar a resposta: 400, e o erro aponta só a descrição
+    assert response.status_code == 400, f"POST de visita com descrição de 256 caracteres deveria responder 400, respondeu {response.status_code}"
+    errors = body.get("schemaValidationErrors") or []
+    assert errors, "a resposta deveria listar os erros de validação"
+    assert {error["field"] for error in errors} == {"description"}, (
+        f"o erro deveria apontar só description, apontou {sorted({error['field'] for error in errors})}"
+    )
+
+    # Verificar o banco: o pet, criado sem visitas, continua sem visitas
+    visits_of_pet = db.execute(COUNT_VISITS_BY_PET, (pet_id,)).fetchone()[0]
+    assert visits_of_pet == 0, f"o pet {pet_id} deveria continuar sem visitas, tem {visits_of_pet}"

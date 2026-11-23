@@ -525,7 +525,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – validação (valor-limite) |
 | **Prioridade** | Baixa |
 | **Objetivo** | Garantir que o limite do contrato vale e que a descrição aceita é gravada inteira. |
-| **Pré-condições** | Dono, tipo e pet criados via API. |
+| **Pré-condições** | Dono, tipo e pet sem visitas gravados por SQL na fixture `owner_with_pet` (tests/conftest.py). |
 | **Dados de teste** | description com 255 e com 256 caracteres. |
 | **Passos** | 1. Para cada tamanho, enviar POST /api/owners/{ownerId}/pets/{petId}/visits.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | 255: status 201 e descrição gravada com 255 caracteres.<br>256: status 400 e nenhuma visita nova. |
