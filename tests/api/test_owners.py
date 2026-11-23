@@ -193,3 +193,52 @@ def test_criar_dono_com_nome_sem_conteudo_e_recusado_sem_gravar(api, db, owners_
     # Verificar o banco: nenhum dono novo
     count_after = db.execute(COUNT_OWNERS).fetchone()[0]
     assert count_after == count_before, f"o total de donos deveria continuar {count_before}, ficou {count_after}"
+
+
+@pytest.mark.parametrize("field", ["firstName", "lastName"])
+def test_criar_dono_com_nome_de_30_letras_grava_o_nome_inteiro(api, db, owners_to_delete, field):
+    """CT-API-OWNERS-06: nome ou sobrenome com 30 letras, o limite do contrato, é aceito e gravado inteiro."""
+    # Preparar: o dono padrão com o campo no limite
+    payload = {**OWNER, field: "a" * 30}
+    assert re.fullmatch(r"[a-z]{30}", payload[field]), "o valor do teste deveria ter 30 letras"
+
+    # Agir
+    response = api.post("/owners", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        owners_to_delete.append(body["id"])
+
+    # Verificar a resposta
+    assert response.status_code == 201, f"POST /owners com {field} de 30 letras deveria responder 201, respondeu {response.status_code}"
+
+    # Verificar o banco: a linha inteira, com o valor de 30 letras sem corte
+    row = db.execute(SELECT_OWNER_BY_ID, (body["id"],)).fetchone()
+    expected = (payload["firstName"], payload["lastName"], payload["address"], payload["city"], payload["telephone"])
+    assert row == expected, f"a linha gravada deveria ser {expected}, é {row}"
+
+
+@pytest.mark.parametrize("field", ["firstName", "lastName"])
+def test_criar_dono_com_nome_de_31_letras_e_recusado_sem_gravar(api, db, owners_to_delete, field):
+    """CT-API-OWNERS-06: nome ou sobrenome com 31 letras, um acima do limite, responde 400 e não grava dono."""
+    # Preparar: o dono padrão com o campo acima do limite, e o total de donos antes
+    payload = {**OWNER, field: "a" * 31}
+    assert re.fullmatch(r"[a-z]{31}", payload[field]), "o valor do teste deveria ter 31 letras"
+    count_before = db.execute(COUNT_OWNERS).fetchone()[0]
+
+    # Agir
+    response = api.post("/owners", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        owners_to_delete.append(body["id"])
+
+    # Verificar a resposta: 400, e o erro aponta só o campo alterado
+    assert response.status_code == 400, f"POST /owners com {field} de 31 letras deveria responder 400, respondeu {response.status_code}"
+    errors = body.get("schemaValidationErrors") or []
+    assert errors, "a resposta deveria listar os erros de validação"
+    assert {error["field"] for error in errors} == {field}, (
+        f"o erro deveria apontar só {field}, apontou {sorted({error['field'] for error in errors})}"
+    )
+
+    # Verificar o banco: nenhum dono novo
+    count_after = db.execute(COUNT_OWNERS).fetchone()[0]
+    assert count_after == count_before, f"o total de donos deveria continuar {count_before}, ficou {count_after}"
