@@ -6,7 +6,7 @@ detalhes de cada um: passos, esperado, obtido, evidência no banco e, quando con
 Ambiente: `springcommunity/spring-petclinic-rest:latest` (4.0.2) com `postgres:16.3`, via `docker compose`. Todos
 reproduzidos do zero (`docker compose down -v` e `up -d --wait`). BUG-01, BUG-02 e BUG-03 foram reproduzidos de novo
 em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`); o BUG-04 foi reproduzido nela em
-2026-11-17, o BUG-05, o BUG-06, o BUG-07, o BUG-08 e o BUG-09, em 2026-11-18, o BUG-10, em 2026-11-19, o BUG-11 e o BUG-12, em 2026-11-20, o BUG-13 e o BUG-14, em 2026-11-21, e o BUG-15 e o BUG-16, em 2026-11-22.
+2026-11-17, o BUG-05, o BUG-06, o BUG-07, o BUG-08 e o BUG-09, em 2026-11-18, o BUG-10, em 2026-11-19, o BUG-11 e o BUG-12, em 2026-11-20, o BUG-13 e o BUG-14, em 2026-11-21, o BUG-15 e o BUG-16, em 2026-11-22, e o BUG-17, em 2026-11-23.
 
 | Bug | Resumo | Impacto | Issue |
 |:---|:---|:---|:---|
@@ -26,6 +26,7 @@ em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`)
 | [BUG-14](#bug-14--tipo-de-pet-com-nome-repetido-é-aceito) | Tipo de pet com nome repetido é aceito, inclusive com outra caixa ou espaço no fim e ao renomear | baixo a médio | [#14](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/14) |
 | [BUG-15](#bug-15--especialidade-com-nome-repetido-é-aceita) | Especialidade com nome repetido é aceita, inclusive com outra caixa, espaço no fim e ao renomear | baixo a médio | [#15](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/15) |
 | [BUG-16](#bug-16--apagar-especialidade-em-uso-responde-404-como-se-ela-não-existisse) | Apagar especialidade em uso responde 404, como se ela não existisse | baixo a médio | [#16](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/16) |
+| [BUG-17](#bug-17--especialidade-do-veterinário-é-resolvida-pelo-nome-o-id-é-ignorado-e-nome-desconhecido-some-em-silêncio) | Especialidade do veterinário é resolvida pelo nome: o `id` é ignorado e nome desconhecido some em silêncio | médio a alto | [#17](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/17) |
 
 ## BUG-01 · API responde 500 em vez de 400 quando o id do dono não é numérico
 
@@ -526,6 +527,40 @@ em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`)
   nome da exceção. É o mesmo tipo de status errado do BUG-05.
 - **Contraste:** apagar um tipo de pet em uso apaga tudo junto (BUG-07); apagar uma especialidade em uso é recusado.
   As duas operações seguem regras opostas para situações parecidas.
+
+## BUG-17 · Especialidade do veterinário é resolvida pelo nome: o id é ignorado e nome desconhecido some em silêncio
+
+- **Issue:** [#17](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/17)
+- **Passos:** `docker compose down -v` → `up -d --wait` → contar as linhas de `vets` e `vet_specialties` → enviar
+  `POST /api/vets` com cada lista de `specialties` da tabela abaixo (o id inexistente é o maior id de `specialties` +
+  1, aqui `4`) → criar um veterinário com `radiology` e enviar `PUT /api/vets/{id}` só com uma especialidade
+  inexistente → criar uma segunda `surgery` (BUG-15) e enviar `POST /api/vets` com o id dela e `"name": "surgery"` →
+  conferir as ligações de cada veterinário no banco.
+- **Esperado:** `400` ou `404` quando uma especialidade da lista não existe, ou quando `id` e `name` não batem, sem
+  gravar o veterinário nem alterar as ligações (o contrato lista os dois status). A especialidade é identificada pelo
+  `id`, como em todos os outros recursos da API.
+- **Obtido:** `201` nos `POST` e `204` no `PUT`, sempre. A API procura cada especialidade pelo `name` e ignora o `id`;
+  o que não acha é descartado sem aviso.
+
+  | Item enviado em `specialties` | Resposta | Ligado no banco |
+  |:---|:---|:---|
+  | `id` 4 (inexistente), `name` `Inexistente` | `201` | nada: veterinário sem especialidade |
+  | `id` 4 (inexistente), `name` `radiology` | `201` | `radiology` (1), achada pelo nome |
+  | `id` 1 (`radiology`), `name` `Inexistente` | `201` | nada |
+  | `id` 1 (`radiology`), `name` `surgery` | `201` | `surgery` (2), o contrário do `id` |
+  | `radiology` + uma inexistente | `201` | só `radiology`; a outra some |
+  | `PUT` de um veterinário com `radiology`, só com uma inexistente | `204` | nada: a `radiology` que existia é removida |
+  | `id` da segunda `surgery` (4), `name` `surgery` | `201` | as duas `surgery` (2 e 4) |
+
+- **Evidência no banco:** as ligações de cada veterinário em `vet_specialties`, conforme a tabela, e as contagens de
+  `vets` e `vet_specialties`: 6 e 5 antes, 13 e 10 com os dados do teste, 6 e 5 depois da limpeza. Reproduzido do zero
+  em 2026-11-23, na imagem `4.0.2` (digest `sha256:daba846d…`).
+- **Causa provável:** ao montar o veterinário, a API troca a lista recebida pelas especialidades cujo nome está na
+  lista (uma busca por nome), sem conferir o `id` nem se todas foram achadas. Por isso nome desconhecido some, `id`
+  não importa e nome repetido (BUG-15) traz mais de uma especialidade.
+- **Impacto:** médio a alto. O `PUT` apaga especialidades que já existiam quando recebe uma que não acha, e um `id`
+  pode ligar a especialidade errada, sempre com sucesso na resposta. Com o BUG-15, uma especialidade pedida vira duas
+  ligadas. Quem integra pelo `id`, como o contrato sugere, grava dados errados sem saber.
 
 ## Observações
 

@@ -1,6 +1,6 @@
 # Casos de teste — petclinic-sql-api
 
-Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um por teste a automatizar, identificados pelo ID CT que vai no comentário acima do teste no código. Os arquivos de cada seção são os previstos em `tests/api/`; nenhum existe ainda. A exceção é a seção Postman, que já roda na coleção. Total: 95 casos.
+Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um por teste a automatizar, identificados pelo ID CT que vai no comentário acima do teste no código. Os arquivos de cada seção são os previstos em `tests/api/`; nenhum existe ainda. A exceção é a seção Postman, que já roda na coleção. Total: 96 casos.
 
 **Notas gerais**
 
@@ -41,7 +41,8 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | Bugs conhecidos | [tests/api/known_bugs/test_pet_type_name.py](#testsapiknown_bugstest_pet_type_namepy) | 1 |
 | Bugs conhecidos | [tests/api/known_bugs/test_specialty_name.py](#testsapiknown_bugstest_specialty_namepy) | 1 |
 | Bugs conhecidos | [tests/api/known_bugs/test_specialty_delete.py](#testsapiknown_bugstest_specialty_deletepy) | 1 |
-| **Total** | | **95** |
+| Bugs conhecidos | [tests/api/known_bugs/test_vet_specialties.py](#testsapiknown_bugstest_vet_specialtiespy) | 1 |
+| **Total** | | **96** |
 
 ## API
 
@@ -932,7 +933,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Enviar POST /api/vets.<br>2. Verificar a resposta.<br>3. Buscar no banco a linha de `vets` e as linhas de `vet_specialties` com o id devolvido. |
 | **Resultado esperado** | Passo 2: status 2xx de criação.<br>Passo 3: first_name e last_name iguais aos enviados; exatamente duas ligações, com os ids das duas especialidades. |
 | **Status** | Não executado |
-| **Observações** | Teardown: vet (com as ligações), depois as especialidades; cada remoção aceita "já removido".<br>Em 2026-11-22, a API respondeu 201 e gravou o nome, o sobrenome e exatamente as duas ligações. Na coleção do Postman: `CT-API-VETS-01`, na pasta Vets. Na limpeza, a confirmação por GET é essencial: se o veterinário não for apagado, o DELETE da especialidade responde 404 (BUG-16), que a limpeza aceitaria como "já removida".<br>Cada item de `specialties` exige `name`: só com `id`, a resposta é 400. Com um `id` válido e um `name` que não existe, o veterinário foi criado sem a especialidade: fica para o CT-API-VETS-06. |
+| **Observações** | Teardown: vet (com as ligações), depois as especialidades; cada remoção aceita "já removido".<br>Em 2026-11-22, a API respondeu 201 e gravou o nome, o sobrenome e exatamente as duas ligações. Na coleção do Postman: `CT-API-VETS-01`, na pasta Vets. Na limpeza, a confirmação por GET é essencial: se o veterinário não for apagado, o DELETE da especialidade responde 404 (BUG-16), que a limpeza aceitaria como "já removida".<br>Cada item de `specialties` exige `name`: só com `id`, a resposta é 400. Com um `id` válido e um `name` que não existe, o veterinário foi criado sem a especialidade: é o BUG-17 (CT-API-VETS-06). |
 
 #### CT-API-VETS-02 — Criar veterinário sem nome ou sobrenome
 
@@ -1004,7 +1005,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Contar as linhas de `vets` e `vet_specialties`.<br>2. Enviar POST /api/vets.<br>3. Verificar a resposta e contar de novo. |
 | **Resultado esperado** | Status 4xx (400 ou 404) e mesmas contagens. |
 | **Status** | Não executado |
-| **Observações** | Dicionário: a chave `vet_specialties_specialty_id_fkey` recusa no banco. Vet gravado sem a ligação seria gravação parcial. |
+| **Observações** | Dicionário: a chave `vet_specialties_specialty_id_fkey` recusa no banco. Vet gravado sem a ligação seria gravação parcial.<br>Em 2026-11-23, a resposta foi 201 e o veterinário foi gravado sem a especialidade: a API procura a especialidade pelo `name` e ignora o `id`, e descarta o que não acha. É o BUG-17 (CT-BUG-17-01), que também cobre o PUT. Nenhum valor passa, então o caso não entra na coleção do Postman. |
 
 #### CT-API-VETS-07 — Trocar as especialidades do veterinário
 
@@ -1550,3 +1551,22 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Resultado obtido** | Passo 3: status 404 com `DataIntegrityViolationException`. Passo 4: a especialidade existe e as contagens não mudaram (BUGS.md). |
 | **Status** | Não executado |
 | **Observações** | Reproduzido do zero em 2026-11-22. A parte do passo 4 passa hoje; o que falha é o status. Teardown: veterinário, depois a especialidade; cada remoção aceita "já removido". |
+
+### tests/api/known_bugs/test_vet_specialties.py
+
+#### CT-BUG-17-01 — [BUG-17] Especialidade do veterinário é identificada pelo id e nada some em silêncio
+
+| Campo | Descrição |
+|---|---|
+| **Módulo / Área** | Bugs conhecidos › API › Veterinários › Especialidades |
+| **Tipo de teste** | Funcional – integridade de dados |
+| **Prioridade** | Alta |
+| **Bug relacionado** | BUG-17 |
+| **Objetivo** | Garantir que a especialidade do veterinário é a do `id` enviado e que uma especialidade que não existe é recusada, sem gravação parcial. |
+| **Pré-condições** | Duas especialidades criadas via API; um veterinário com uma delas, para o PUT. |
+| **Dados de teste** | POST com: `id` inexistente (maior id + 1); `id` existente com `name` inexistente; `id` de uma especialidade com o `name` da outra; uma existente e uma inexistente. PUT do veterinário só com uma inexistente. |
+| **Passos** | 1. Contar as linhas de `vets` e `vet_specialties` e guardar as ligações do veterinário do PUT.<br>2. Enviar cada pedido.<br>3. Verificar cada resposta.<br>4. Contar de novo e conferir as ligações. |
+| **Resultado esperado** | Passo 3: status 400 ou 404 nos pedidos com especialidade inexistente; no pedido com `id` e `name` trocados, 400 ou a especialidade do `id`.<br>Passo 4: mesmas contagens e as ligações do veterinário do PUT sem mudança. |
+| **Resultado obtido** | Passo 3: 201 nos POST e 204 no PUT. Passo 4: veterinários a mais, gravados sem a especialidade ou com a do `name`; o veterinário do PUT perdeu a especialidade que tinha (BUGS.md). |
+| **Status** | Não executado |
+| **Observações** | Reproduzido do zero em 2026-11-23. Um caso parametrizado por pedido (`pytest.mark.parametrize`). As especialidades usadas são criadas pelo teste, com nomes únicos, para o BUG-15 não interferir. Teardown: veterinários, depois as especialidades; cada remoção aceita "já removido". |

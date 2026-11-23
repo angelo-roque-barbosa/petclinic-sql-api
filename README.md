@@ -108,7 +108,7 @@ O banco permite todos os casos acima; nos dados atuais só aparecem os pets anti
 
 ## Achados
 
-Dezesseis bugs e duas observações, todos reproduzidos do zero e com evidência no banco. Os detalhes (passos,
+Dezessete bugs e duas observações, todos reproduzidos do zero e com evidência no banco. Os detalhes (passos,
 esperado, obtido, evidência e causa) estão em [BUGS.md](BUGS.md).
 
 | Bug | Resumo | Impacto | Issue |
@@ -129,6 +129,7 @@ esperado, obtido, evidência e causa) estão em [BUGS.md](BUGS.md).
 | BUG-14 | `POST /api/pettypes` aceita nome repetido, inclusive com outra caixa ou espaço no fim, e o `PUT` renomeia para um nome que já existe: o banco fica com `cat`, `Cat`, `CAT` e `cat ` | baixo a médio | [#14](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/14) |
 | BUG-15 | O mesmo do BUG-14 nas especialidades: `POST` e `PUT` aceitam nome repetido, inclusive com outra caixa ou espaço no fim | baixo a médio | [#15](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/15) |
 | BUG-16 | `DELETE` de especialidade em uso responde 404, como se ela não existisse; nada é apagado, porque o banco recusa | baixo a médio | [#16](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/16) |
+| BUG-17 | `POST` e `PUT` de veterinário resolvem a especialidade pelo nome: o `id` é ignorado, nome desconhecido some com 201/204 e o `PUT` apaga as que existiam | médio a alto | [#17](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/17) |
 
 **OBS-01:** o contrato documenta 200 como sucesso em sete endpoints, mas a API devolve 201 ou 204 (o correto). Não
 é bug; fica para a validação de contrato da fase 5.
