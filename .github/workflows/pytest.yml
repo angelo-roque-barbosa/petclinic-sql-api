@@ -1,0 +1,53 @@
+# Roda os testes do pytest (API com o banco como oráculo) contra a API e o PostgreSQL do
+# docker-compose.yml, no próprio runner do GitHub. Nada aponta para servidor de terceiros.
+name: pytest
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Baixa o repositório
+        uses: actions/checkout@v7.0.1
+
+      - name: Prepara o Python
+        uses: actions/setup-python@v7.1.0
+        with:
+          python-version: 3.14.4
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Instala as dependências (versões exatas do requirements.txt)
+        run: pip install -r requirements.txt
+
+      # O --wait espera os healthchecks: o banco com pg_isready, a API com curl no /v3/api-docs
+      # e o serviço de limpeza de índices (BUG-02) depois da primeira limpeza.
+      - name: Sobe API e PostgreSQL
+        run: docker compose up -d --wait
+
+      # Os endereços padrão do tests/conftest.py já são os do docker-compose.yml.
+      - name: Roda os testes
+        run: pytest tests/api -v --junitxml=pytest-report.xml
+
+      - name: Guarda o relatório do pytest
+        if: always()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: pytest-report
+          path: pytest-report.xml
+          if-no-files-found: ignore
+
+      - name: Mostra os logs da API e do banco
+        if: failure()
+        run: docker compose logs api db
+
+      - name: Derruba o ambiente
+        if: always()
+        run: docker compose down -v

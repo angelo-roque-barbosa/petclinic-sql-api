@@ -47,6 +47,8 @@ Os testes do pytest chamam a API e conferem o efeito direto no banco. As fixture
 apagam no fim os dados que cada teste criou. Se a API ou o banco não estiverem no ar, o pytest para com código 3,
 porque ambiente fora do ar não é resultado. Os endereços vêm de variáveis de ambiente (`API_BASE_URL`, `PGHOST`,
 `PGPORT` e outras), com os valores do `docker-compose.yml` como padrão.
+No GitHub Actions, o workflow [`pytest.yml`](.github/workflows/pytest.yml) faz o mesmo a cada push e pull request,
+separado do workflow do Newman, para cada um mostrar a própria situação.
 
 A coleção roda inteira e na ordem: ela cria os próprios dados, apaga tudo no fim e confere, no
 `CT-API-INTEGRITY-01`, que os totais terminaram iguais aos do início. No GitHub Actions, o workflow
