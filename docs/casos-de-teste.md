@@ -375,7 +375,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Para cada data, enviar POST /api/owners/{ownerId}/pets.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | Status 400 em todos e nenhum pet novo. |
 | **Status** | Não executado |
-| **Observações** | Dicionário: o banco recusa 2020-02-30, mas lê `04/03/2010` como 3 de abril (DateStyle MDY). A API não pode repassar a data como texto ao banco.<br>Hoje os três valores respondem 500 e nenhum pet é criado: é o BUG-08 (CT-BUG-08-01). Por isso este caso não entra na coleção do Postman, que continua sem falhas conhecidas. |
+| **Observações** | Dicionário: o banco recusa 2020-02-30, mas lê `04/03/2010` como 3 de abril (DateStyle MDY). A API não pode repassar a data como texto ao banco.<br>Hoje os três valores respondem 500 e nenhum pet é criado: é o BUG-08 (CT-BUG-08-01). Por isso este caso não entra na coleção do Postman nem nos testes principais do pytest, que continuam sem falhas conhecidas; reconfirmado em 2026-11-23 (500 nos três, nenhum pet gravado). |
 
 #### CT-API-PETS-08 — Criar pet para dono inexistente
 
@@ -385,7 +385,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – recurso inexistente |
 | **Prioridade** | Média |
 | **Objetivo** | Garantir que a API responde 404 e não grava pet sem dono. |
-| **Pré-condições** | Tipo criado via API. |
+| **Pré-condições** | Tipo gravado por SQL na fixture `prepared_pet_type` (tests/conftest.py). |
 | **Dados de teste** | ownerId inexistente: maior id de `owners` + 1, lido do banco na hora; pet padrão. |
 | **Passos** | 1. Contar as linhas de `pets`.<br>2. Enviar POST /api/owners/{ownerId inexistente}/pets.<br>3. Verificar a resposta e contar de novo. |
 | **Resultado esperado** | Status 404 e mesma contagem. |

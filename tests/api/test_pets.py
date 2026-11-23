@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
-from conftest import PREPARED_PET_TYPE_NAME
+from conftest import COUNT_PETS, PREPARED_PET_TYPE_NAME, SELECT_MAX_OWNER_ID, SELECT_OWNER_BY_ID
 
 # Pet padrão do docs/casos-de-teste.md: nome com letras, nascimento no passado. O tipo é o da fixture.
 PET = {"name": "Rex", "birthDate": "2020-05-10"}
@@ -281,3 +281,28 @@ def test_criar_pet_com_mais_de_50_anos_e_recusado_sem_gravar(api, db, prepared_o
     # Verificar o banco: o dono, criado sem pets, continua sem pets
     pets_of_owner = db.execute(COUNT_PETS_BY_OWNER, (owner_id,)).fetchone()[0]
     assert pets_of_owner == 0, f"o dono {owner_id} deveria continuar sem pets, tem {pets_of_owner}"
+
+
+def test_criar_pet_para_dono_inexistente_responde_404_sem_gravar(api, db, prepared_pet_type, pets_to_delete):
+    """CT-API-PETS-08: criar um pet para um dono que não existe responde 404 e não grava pet nem cria o dono."""
+    # Preparar: um id de dono que não existe, lido do banco na hora (o maior id + 1), e o total de pets antes
+    missing_owner_id = db.execute(SELECT_MAX_OWNER_ID).fetchone()[0] + 1
+    assert db.execute(SELECT_OWNER_BY_ID, (missing_owner_id,)).fetchone() is None, f"o dono {missing_owner_id} não deveria existir"
+    pets_before = db.execute(COUNT_PETS).fetchone()[0]
+    payload = {**PET, "type": {"id": prepared_pet_type, "name": PREPARED_PET_TYPE_NAME}}
+
+    # Agir
+    response = api.post(f"/owners/{missing_owner_id}/pets", json=payload)
+    body = response.json() if response.content else {}
+    if isinstance(body, dict) and "id" in body:
+        pets_to_delete.append(body["id"])
+
+    # Verificar a resposta
+    assert response.status_code == 404, f"POST /owners/{missing_owner_id}/pets deveria responder 404, respondeu {response.status_code}"
+    assert "birthDate" not in response.text, "a resposta não deveria trazer dados de pet"
+
+    # Verificar o banco: nenhum pet para esse id, nenhum pet a mais e o dono continua sem existir
+    assert db.execute(COUNT_PETS_BY_OWNER, (missing_owner_id,)).fetchone()[0] == 0, f"nenhum pet deveria apontar para o dono {missing_owner_id}"
+    pets_after = db.execute(COUNT_PETS).fetchone()[0]
+    assert pets_after == pets_before, f"o total de pets deveria continuar {pets_before}, ficou {pets_after}"
+    assert db.execute(SELECT_OWNER_BY_ID, (missing_owner_id,)).fetchone() is None, f"o POST não deveria criar o dono {missing_owner_id}"

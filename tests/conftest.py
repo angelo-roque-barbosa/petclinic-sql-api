@@ -106,6 +106,28 @@ def owners_to_delete(api):
             f"limpeza: DELETE /owners/{owner_id} respondeu {response.status_code}"
         )
         
+# Consultas usadas por mais de um arquivo de teste.
+
+# Pergunta: qual é a linha de `owners` com o id que a API devolveu no POST?
+# A consulta deve trazer, nesta ordem, first_name, last_name, address, city e telephone,
+# e receber o id como parâmetro (%s), sem montar o texto da consulta com o valor.
+SELECT_OWNER_BY_ID = """ 
+SELECT first_name, last_name, address, city, telephone FROM owners WHERE id = %s;
+  """
+
+# Pergunta: quantas linhas existem hoje na tabela `pets`?
+# Devolve uma linha só, com um único valor: o total de pets.
+COUNT_PETS = """
+SELECT COUNT(*) FROM pets;
+"""
+
+# Pergunta: qual é o maior id da tabela `owners` hoje?
+# Devolve uma linha só, com um único valor: o maior id.
+SELECT_MAX_OWNER_ID = """
+SELECT MAX(id) FROM owners;
+"""
+
+
 # Dados que a fixture owner_with_pet grava direto no banco. São do próprio teste: nenhum vem do seed,
 # então a limpeza não mexe em dado do populateDB.sql.
 PREPARED_PET_TYPE_NAME = "chinchila"

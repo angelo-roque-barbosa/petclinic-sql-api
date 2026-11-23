@@ -4,6 +4,8 @@ import re
 
 import pytest
 
+from conftest import COUNT_PETS, SELECT_MAX_OWNER_ID, SELECT_OWNER_BY_ID
+
 # Dono padrão do docs/casos-de-teste.md: nome e sobrenome só com letras, telefone com 10 dígitos.
 OWNER = {
     "firstName": "Clara",
@@ -13,12 +15,6 @@ OWNER = {
     "telephone": "8199990002",
 }
 
-# Pergunta: qual é a linha de `owners` com o id que a API devolveu no POST?
-# A consulta deve trazer, nesta ordem, first_name, last_name, address, city e telephone,
-# e receber o id como parâmetro (%s), sem montar o texto da consulta com o valor.
-SELECT_OWNER_BY_ID = """ 
-SELECT first_name, last_name, address, city, telephone FROM owners WHERE id = %s;
-  """
 
 def test_criar_dono_com_dados_validos_grava_os_dados_enviados(api, db, owners_to_delete):
     """CT-API-OWNERS-01: criar um dono com dados válidos grava no banco exatamente os dados enviados."""
@@ -335,12 +331,6 @@ def test_apagar_dono_sem_pets_remove_a_linha(api, db, prepared_owner):
     assert count_after == count_before - 1, f"o total de donos deveria cair para {count_before - 1}, ficou {count_after}"
 
 
-# Pergunta: quantas linhas existem hoje na tabela `pets`?
-# Devolve uma linha só, com um único valor: o total de pets.
-COUNT_PETS = """
-SELECT COUNT(*) FROM pets;
-"""
-
 # Pergunta: quantas linhas existem hoje na tabela `visits`?
 # Devolve uma linha só, com um único valor: o total de visitas.
 COUNT_VISITS = """
@@ -384,13 +374,6 @@ def test_apagar_dono_com_pet_apaga_junto_o_pet_e_a_visita(api, db, owner_with_pe
     assert owners_after == owners_before - 1, f"o total de donos deveria cair para {owners_before - 1}, ficou {owners_after}"
     assert pets_after == pets_before - 1, f"o total de pets deveria cair para {pets_before - 1}, ficou {pets_after}"
     assert visits_after == visits_before - 1, f"o total de visitas deveria cair para {visits_before - 1}, ficou {visits_after}"
-
-
-# Pergunta: qual é o maior id da tabela `owners` hoje?
-# Devolve uma linha só, com um único valor: o maior id.
-SELECT_MAX_OWNER_ID = """
-SELECT MAX(id) FROM owners;
-"""
 
 
 def test_consultar_dono_inexistente_responde_404(api, db):
