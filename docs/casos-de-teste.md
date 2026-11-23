@@ -445,7 +445,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – efeito no servidor |
 | **Prioridade** | Média |
 | **Objetivo** | Garantir que a exclusão remove o pet e mantém o dono. |
-| **Pré-condições** | Dono, tipo e pet sem visitas criados via API. |
+| **Pré-condições** | Dono, tipo e pet sem visitas gravados por SQL na fixture `owner_with_pet` (tests/conftest.py). |
 | **Dados de teste** | Id do pet. |
 | **Passos** | 1. Enviar DELETE /api/pets/{petId}.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | Status 2xx; nenhuma linha de `pets` com esse id; o dono continua no banco. |

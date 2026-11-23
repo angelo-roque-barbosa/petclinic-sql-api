@@ -398,3 +398,23 @@ def test_mover_pet_para_dono_inexistente_responde_404_sem_mudar_o_pet(api, db, o
     row_after = db.execute(SELECT_PET_BY_ID, (pet_id,)).fetchone()
     assert row_after == row_before, f"a linha do pet {pet_id} deveria continuar {row_before}, ficou {row_after}"
     assert db.execute(SELECT_OWNER_BY_ID, (missing_owner_id,)).fetchone() is None, f"o PUT não deveria criar o dono {missing_owner_id}"
+
+
+def test_apagar_pet_sem_visitas_remove_so_o_pet(api, db, owner_with_pet):
+    """CT-API-PETS-12: apagar um pet sem visitas responde 204, remove só esse pet e mantém o dono."""
+    # Preparar: o dono e o pet vêm da fixture; aqui só o total de pets antes
+    owner_id = owner_with_pet["owner_id"]
+    pet_id = owner_with_pet["pet_id"]
+    pets_before = db.execute(COUNT_PETS).fetchone()[0]
+
+    # Agir
+    response = api.delete(f"/pets/{pet_id}")
+
+    # Verificar a resposta
+    assert response.status_code == 204, f"DELETE /pets/{pet_id} deveria responder 204, respondeu {response.status_code}"
+
+    # Verificar o banco: o pet não existe mais, saiu exatamente um pet e o dono continua
+    assert db.execute(SELECT_PET_BY_ID, (pet_id,)).fetchone() is None, f"o pet {pet_id} não deveria mais existir"
+    pets_after = db.execute(COUNT_PETS).fetchone()[0]
+    assert pets_after == pets_before - 1, f"o total de pets deveria cair para {pets_before - 1}, ficou {pets_after}"
+    assert db.execute(SELECT_OWNER_BY_ID, (owner_id,)).fetchone() is not None, f"o dono {owner_id} deveria continuar no banco"
