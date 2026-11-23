@@ -163,6 +163,8 @@ execução; quando difere do esperado, a linha aponta o bug.
 | `date` (POST de visita) | antes do nascimento (o banco não compara) | nascimento − 1 dia | 400, nada gravado | 201, gravada (BUG-12) |
 | `date` (POST de visita) | muito antes do nascimento | `1900-01-01` | 400, nada gravado | 201, gravada (BUG-12) |
 | `date` (POST de visita) | no futuro: agendamento (sem limite de antecedência por enquanto) | hoje + 30 dias | 201, gravada igual | 201, gravada igual |
+| `date` (POST de visita) | 29/02 em ano bissexto | `2020-02-29` | 201, gravada igual | 201, gravada igual |
+| `date` (POST de visita) | 29/02 em ano não bissexto (o banco recusa) | `2021-02-29` | 400, nada gravado | 500, nada gravado (BUG-08) |
 
 ## Achados
 

@@ -569,12 +569,12 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – validação (valor-limite) |
 | **Prioridade** | Média |
 | **Objetivo** | Garantir que a API aceita 29/02 só em ano bissexto e recusa o resto como erro do cliente. |
-| **Pré-condições** | Dono, tipo e pet nascido antes de 2020, criados via API. |
+| **Pré-condições** | Dono e tipo gravados por SQL nas fixtures `prepared_owner` e `prepared_pet_type` (tests/conftest.py) e pet nascido em 2019-01-15 gravado pela fixture local `pet_born_before_2020` (tests/api/test_visits.py). |
 | **Dados de teste** | date = 2020-02-29 e 2021-02-29. |
 | **Passos** | 1. Para cada data, enviar POST /api/owners/{ownerId}/pets/{petId}/visits.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | 2020-02-29: status 201 e data gravada igual.<br>2021-02-29: status 400 e nenhuma visita nova. |
 | **Status** | Não executado |
-| **Observações** | Dicionário: o banco aceita 2020-02-29 e recusa 2021-02-29.<br>Em 2026-11-20, a API aceitou 2020-02-29 (201, data exata), mas respondeu 500 para 2021-02-29, sem gravar nada: é o BUG-08 (CT-BUG-08-01). Na coleção do Postman entra só o ano bissexto (`CT-API-VISITS-07a`), para ela continuar sem falhas conhecidas. O pet do CT-API-PETS-01 nasceu em 2020-05-10, então o 07a cria um pet nascido em 2019 só para ele, para a data não cair antes do nascimento (BUG-12). |
+| **Observações** | Dicionário: o banco aceita 2020-02-29 e recusa 2021-02-29.<br>Em 2026-11-20, a API aceitou 2020-02-29 (201, data exata), mas respondeu 500 para 2021-02-29, sem gravar nada: é o BUG-08 (CT-BUG-08-01). Na coleção do Postman entra só o ano bissexto (`CT-API-VISITS-07a`), e no pytest também (`test_criar_visita_em_29_de_fevereiro_de_ano_bissexto_grava_a_data`), para as duas suítes continuarem sem falhas conhecidas. O pet do CT-API-PETS-01 nasceu em 2020-05-10, então o 07a cria um pet nascido em 2019 só para ele, e o pytest também, para a data não cair antes do nascimento (BUG-12). |
 
 #### CT-API-VISITS-08 — Data fora do formato ISO
 

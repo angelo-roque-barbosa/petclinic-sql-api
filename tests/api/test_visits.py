@@ -4,7 +4,7 @@ from datetime import date, timedelta
 
 import pytest
 
-from conftest import PREPARED_PET, today_utc
+from conftest import DELETE_PET, DELETE_VISIT, INSERT_PET, PREPARED_PET, today_utc
 
 # Visita padrão: a data fica entre o nascimento do pet da fixture (2020-05-10) e hoje.
 VISIT = {"date": "2026-11-01", "description": "Consulta de rotina"}
@@ -204,6 +204,58 @@ def test_criar_visita_com_data_futura_grava_o_agendamento(api, db, owner_with_pe
     assert response.status_code == 201, f"POST de visita agendada para {visit_date} deveria responder 201, respondeu {response.status_code}"
 
     # Verificar o banco: a linha inteira, com a data futura exata
+    row = db.execute(SELECT_VISIT_BY_ID, (body["id"],)).fetchone()
+    expected = (pet_id, visit_date, payload["description"])
+    assert row == expected, f"a linha da visita {body['id']} deveria ser {expected}, é {row}"
+
+
+# Pet nascido antes de 2020: o da fixture owner_with_pet nasceu em 2020-05-10, e uma visita em 2020-02-29
+# cairia antes do nascimento (BUG-12). É o mesmo pet do CT-API-VISITS-07a no Postman.
+PET_BORN_BEFORE_2020 = {"name": "Mel", "birth_date": date(2019, 1, 15)}
+
+
+@pytest.fixture
+def pet_born_before_2020(db, prepared_owner, prepared_pet_type):
+    """Grava direto no banco um pet nascido em 2019-01-15, do dono e do tipo das fixtures prepared_owner e
+    prepared_pet_type, e entrega os ids e uma lista `visit_ids` para o teste registrar as visitas criadas.
+
+    No fim, apaga as visitas registradas e depois o pet, nessa ordem por causa da chave estrangeira de
+    `visits`; apagar zero linhas também serve. O dono e o tipo são apagados depois, pelas fixtures de que esta
+    depende."""
+    created = {"owner_id": prepared_owner, "type_id": prepared_pet_type, "visit_ids": []}
+    created["pet_id"] = db.execute(
+        INSERT_PET,
+        (PET_BORN_BEFORE_2020["name"], PET_BORN_BEFORE_2020["birth_date"], created["type_id"], created["owner_id"]),
+    ).fetchone()[0]
+    yield created
+    for visit_id in created["visit_ids"]:
+        db.execute(DELETE_VISIT, (visit_id,))
+    db.execute(DELETE_PET, (created["pet_id"],))
+
+
+def test_criar_visita_em_29_de_fevereiro_de_ano_bissexto_grava_a_data(api, db, pet_born_before_2020):
+    """CT-API-VISITS-07: 29 de fevereiro de um ano bissexto (2020-02-29) é uma data válida, é aceita e fica
+    gravada igual.
+
+    O mesmo dia num ano não bissexto (2021-02-29) deveria ser recusado com 400, mas hoje a API responde 500:
+    é o BUG-08, coberto pelo CT-BUG-08-01."""
+    # Preparar: a data cai depois do nascimento do pet, para não esbarrar no BUG-12
+    owner_id = pet_born_before_2020["owner_id"]
+    pet_id = pet_born_before_2020["pet_id"]
+    visit_date = date(2020, 2, 29)
+    assert visit_date > PET_BORN_BEFORE_2020["birth_date"], "a data do teste deveria ser depois do nascimento do pet"
+    payload = {**VISIT, "date": visit_date.isoformat()}
+
+    # Agir
+    response = api.post(f"/owners/{owner_id}/pets/{pet_id}/visits", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        pet_born_before_2020["visit_ids"].append(body["id"])
+
+    # Verificar a resposta
+    assert response.status_code == 201, f"POST de visita em {visit_date} deveria responder 201, respondeu {response.status_code}"
+
+    # Verificar o banco: a linha inteira, com o 29 de fevereiro
     row = db.execute(SELECT_VISIT_BY_ID, (body["id"],)).fetchone()
     expected = (pet_id, visit_date, payload["description"])
     assert row == expected, f"a linha da visita {body['id']} deveria ser {expected}, é {row}"
