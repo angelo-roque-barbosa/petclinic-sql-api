@@ -210,26 +210,38 @@ def owner_factory(db):
 
 
 @pytest.fixture
-def owner_with_pet(db, prepared_owner):
-    """Acrescenta ao dono da fixture prepared_owner um tipo de pet e um pet desse dono, gravados direto no
-    banco, e entrega os ids.
+def prepared_pet_type(db):
+    """Grava direto no banco um tipo de pet e entrega o id. No fim, apaga o tipo; apagar zero linhas também
+    serve, porque ele pode já ter sido removido."""
+    type_id = db.execute(INSERT_PET_TYPE, (PREPARED_PET_TYPE_NAME,)).fetchone()[0]
+    yield type_id
+    db.execute(DELETE_PET_TYPE, (type_id,))
 
-    No fim, apaga o pet e o tipo; o dono é apagado depois, pela prepared_owner, porque o pytest desmonta
-    primeiro a fixture que depende da outra. Apagar zero linhas também serve, e, se a preparação parar no
-    meio, só o que chegou a ser criado é apagado."""
-    created = {"owner_id": prepared_owner}
-    try:
-        created["type_id"] = db.execute(INSERT_PET_TYPE, (PREPARED_PET_TYPE_NAME,)).fetchone()[0]
-        created["pet_id"] = db.execute(
-            INSERT_PET,
-            (PREPARED_PET["name"], PREPARED_PET["birth_date"], created["type_id"], created["owner_id"]),
-        ).fetchone()[0]
-        yield created
-    finally:
-        if "pet_id" in created:
-            db.execute(DELETE_PET, (created["pet_id"],))
-        if "type_id" in created:
-            db.execute(DELETE_PET_TYPE, (created["type_id"],))
+
+@pytest.fixture
+def pets_to_delete(db, prepared_owner, prepared_pet_type):
+    """Lista de ids de pets criados pela API no teste. No fim, cada um é apagado por SQL; apagar zero linhas
+    também serve. Depende do dono e do tipo para o pytest apagar os pets antes deles."""
+    ids = []
+    yield ids
+    for pet_id in ids:
+        db.execute(DELETE_PET, (pet_id,))
+
+
+@pytest.fixture
+def owner_with_pet(db, prepared_owner, prepared_pet_type):
+    """Acrescenta ao dono e ao tipo das fixtures prepared_owner e prepared_pet_type um pet desse dono, gravado
+    direto no banco, e entrega os ids.
+
+    No fim, apaga o pet; o dono e o tipo são apagados depois, pelas fixtures de que esta depende, porque o
+    pytest desmonta primeiro a fixture que depende das outras. Apagar zero linhas também serve."""
+    created = {"owner_id": prepared_owner, "type_id": prepared_pet_type}
+    created["pet_id"] = db.execute(
+        INSERT_PET,
+        (PREPARED_PET["name"], PREPARED_PET["birth_date"], created["type_id"], created["owner_id"]),
+    ).fetchone()[0]
+    yield created
+    db.execute(DELETE_PET, (created["pet_id"],))
 
 
 @pytest.fixture

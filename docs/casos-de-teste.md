@@ -281,12 +281,12 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – positivo |
 | **Prioridade** | Alta |
 | **Objetivo** | Garantir que o pet é gravado com os dados enviados e ligado ao dono e ao tipo certos. |
-| **Pré-condições** | Dono padrão e tipo de pet criados via API. |
+| **Pré-condições** | Dono e tipo gravados por SQL nas fixtures `prepared_owner` e `prepared_pet_type` (tests/conftest.py). |
 | **Dados de teste** | Pet padrão: name, birthDate no passado, type = tipo criado. |
 | **Passos** | 1. Enviar POST /api/owners/{ownerId}/pets com o pet padrão.<br>2. Verificar a resposta.<br>3. Buscar no banco a linha de `pets` com o id devolvido. |
 | **Resultado esperado** | Passo 2: status 201.<br>Passo 3: name e birth_date iguais aos enviados, owner_id = id do dono, type_id = id do tipo. |
 | **Status** | Não executado |
-| **Observações** | Teardown: pet, depois dono e tipo; cada remoção aceita "já removido". |
+| **Observações** | Teardown: pet (fixture `pets_to_delete`), depois dono e tipo, todos por SQL; cada remoção aceita "já removido". |
 
 #### CT-API-PETS-02 — Criar pet sem cada um dos campos obrigatórios
 
