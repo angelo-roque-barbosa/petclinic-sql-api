@@ -1063,9 +1063,9 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Pré-condições** | Especialidade e vet com ela, criados via API. |
 | **Dados de teste** | Id do vet. |
 | **Passos** | 1. Enviar DELETE /api/vets/{id}.<br>2. Verificar a resposta.<br>3. Conferir no banco o vet, a ligação e a especialidade. |
-| **Resultado esperado** | Passo 2: status 4xx (409).<br>Passo 3: vet, ligação e especialidade continuam no banco. |
+| **Resultado esperado** | Passo 2: status 204.<br>Passo 3: o vet e as ligações dele saem; a especialidade continua no banco, sem ligação órfã. |
 | **Status** | Não executado |
-| **Observações** | Dicionário: a chave `vet_specialties_vet_id_fkey` recusa no banco.<br>Regra a confirmar: a alternativa é apagar o vet e as ligações juntos, mantendo a especialidade. Em qualquer regra, nunca 500 e nunca remoção parcial. |
+| **Observações** | Dicionário: a chave `vet_specialties_vet_id_fkey` recusa no banco.<br>Regra adotada em 2026-11-23: apagar o vet leva as ligações dele e mantém a especialidade, a alternativa que o caso já previa. A ligação pertence ao veterinário; a especialidade é catálogo, e apagá-la em uso é recusado (BUG-16). Em 2026-11-23, o DELETE respondeu 204, o vet e as duas ligações saíram, as especialidades ficaram e não sobrou ligação órfã; nada de 500 nem remoção parcial. Na coleção do Postman: `CT-API-VETS-10`, com um veterinário de controle que tem a mesma especialidade e tem de continuar com ela. Ligação órfã não aparece pela API; a conferência no banco fica para o pytest. |
 
 #### CT-API-VETS-11 — Consultar veterinário inexistente
 
