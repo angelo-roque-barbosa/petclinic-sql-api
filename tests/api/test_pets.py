@@ -79,3 +79,30 @@ def test_criar_pet_sem_campo_obrigatorio_e_recusado_sem_gravar(
     # Verificar o banco: o dono, criado sem pets, continua sem pets
     pets_of_owner = db.execute(COUNT_PETS_BY_OWNER, (owner_id,)).fetchone()[0]
     assert pets_of_owner == 0, f"o dono {owner_id} deveria continuar sem pets, tem {pets_of_owner}"
+
+
+def test_criar_pet_com_nome_vazio_e_recusado_sem_gravar(api, db, prepared_owner, prepared_pet_type, pets_to_delete):
+    """CT-API-PETS-03: criar um pet com nome vazio responde 400 apontando name e não grava pet para o dono.
+
+    O nome só com espaços também deveria ser recusado, mas hoje é aceito: é o BUG-06, coberto pelo CT-BUG-06-01."""
+    # Preparar: o pet padrão com o nome vazio; o dono e o tipo vêm das fixtures
+    owner_id = prepared_owner
+    payload = {**PET, "name": "", "type": {"id": prepared_pet_type, "name": PREPARED_PET_TYPE_NAME}}
+
+    # Agir
+    response = api.post(f"/owners/{owner_id}/pets", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        pets_to_delete.append(body["id"])
+
+    # Verificar a resposta: 400, e o erro aponta só o nome
+    assert response.status_code == 400, f"POST de pet com nome vazio deveria responder 400, respondeu {response.status_code}"
+    errors = body.get("schemaValidationErrors") or []
+    assert errors, "a resposta deveria listar os erros de validação"
+    assert {error["field"] for error in errors} == {"name"}, (
+        f"o erro deveria apontar só name, apontou {sorted({error['field'] for error in errors})}"
+    )
+
+    # Verificar o banco: o dono, criado sem pets, continua sem pets
+    pets_of_owner = db.execute(COUNT_PETS_BY_OWNER, (owner_id,)).fetchone()[0]
+    assert pets_of_owner == 0, f"o dono {owner_id} deveria continuar sem pets, tem {pets_of_owner}"

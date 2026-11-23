@@ -311,12 +311,12 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – negativo (validação) |
 | **Prioridade** | Média |
 | **Objetivo** | Garantir que a API recusa nome sem conteúdo. |
-| **Pré-condições** | Dono padrão e tipo criados via API. |
+| **Pré-condições** | Dono, sem pets, e tipo gravados por SQL nas fixtures `prepared_owner` e `prepared_pet_type` (tests/conftest.py). |
 | **Dados de teste** | name = `''` e name = `'   '`. |
 | **Passos** | 1. Para cada nome, enviar POST /api/owners/{ownerId}/pets.<br>2. Verificar a resposta e os pets do dono no banco. |
 | **Resultado esperado** | Status 400 e zero pets. |
 | **Status** | Não executado |
-| **Observações** | Dicionário: o banco aceita nome vazio, mesmo com NOT NULL. O contrato barra `''` (minLength 1), mas não `'   '`.<br>Hoje `'   '` é aceito: é o BUG-06 (CT-BUG-06-01). Na coleção do Postman entra só `''` (`CT-API-PETS-03a`), para ela continuar sem falhas conhecidas. |
+| **Observações** | Dicionário: o banco aceita nome vazio, mesmo com NOT NULL. O contrato barra `''` (minLength 1), mas não `'   '`.<br>Hoje `'   '` é aceito: é o BUG-06 (CT-BUG-06-01). Na coleção do Postman entra só `''` (`CT-API-PETS-03a`), e no pytest também (`test_criar_pet_com_nome_vazio_e_recusado_sem_gravar`), para as duas suítes continuarem sem falhas conhecidas. |
 
 #### CT-API-PETS-04 — Nome do pet no limite de 30 caracteres
 
