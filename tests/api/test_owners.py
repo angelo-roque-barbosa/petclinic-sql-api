@@ -436,3 +436,54 @@ def test_buscar_donos_por_sobrenome_devolve_os_que_comecam_com_o_termo(api, db, 
     assert db_ids == starts_with, f"o banco deveria ter só os donos criados com o prefixo {sorted(starts_with)}, tem {sorted(db_ids)}"
     assert response_ids == db_ids, f"a busca deveria devolver {sorted(db_ids)}, devolveu {sorted(response_ids)}"
     assert contains_only not in response_ids, "a busca não deveria devolver quem só contém o termo no meio do sobrenome"
+
+
+def test_criar_dono_com_id_de_outro_dono_no_corpo_nao_sobrescreve_o_outro(api, db, prepared_owner, owners_to_delete):
+    """CT-API-OWNERS-13: o id de um dono existente, enviado no corpo do POST, é ignorado: o banco gera outro
+    id e o dono existente fica intacto."""
+    # Preparar: o dono A vem da fixture; a linha dele, lida do banco, é o valor esperado depois
+    existing_id = prepared_owner
+    existing_before = db.execute(SELECT_OWNER_BY_ID, (existing_id,)).fetchone()
+    payload = {**OWNER, "id": existing_id}
+
+    # Agir
+    response = api.post("/owners", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        owners_to_delete.append(body["id"])
+
+    # Verificar a resposta: 201, com um id gerado pelo banco
+    assert response.status_code == 201, f"POST /owners com id no corpo deveria responder 201, respondeu {response.status_code}"
+    assert body["id"] != existing_id, f"o id devolvido deveria ser outro, não o {existing_id} enviado no corpo"
+
+    # Verificar o banco: o dono A intacto, e a linha nova com os dados enviados
+    existing_after = db.execute(SELECT_OWNER_BY_ID, (existing_id,)).fetchone()
+    assert existing_after == existing_before, f"o dono {existing_id} deveria continuar {existing_before}, ficou {existing_after}"
+    new_row = db.execute(SELECT_OWNER_BY_ID, (body["id"],)).fetchone()
+    expected = (OWNER["firstName"], OWNER["lastName"], OWNER["address"], OWNER["city"], OWNER["telephone"])
+    assert new_row == expected, f"a linha nova {body['id']} deveria ser {expected}, é {new_row}"
+
+
+def test_criar_dono_com_id_inexistente_no_corpo_ignora_o_id(api, db, owners_to_delete):
+    """CT-API-OWNERS-13: um id que não existe, enviado no corpo do POST, é ignorado: o banco gera outro id e
+    nenhuma linha fica com o id enviado."""
+    # Preparar: um id longe do maior id, para o banco não gerar justamente esse número
+    sent_id = db.execute(SELECT_MAX_OWNER_ID).fetchone()[0] + 1000
+    assert db.execute(SELECT_OWNER_BY_ID, (sent_id,)).fetchone() is None, f"o id {sent_id} não deveria existir"
+    payload = {**OWNER, "id": sent_id}
+
+    # Agir
+    response = api.post("/owners", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        owners_to_delete.append(body["id"])
+
+    # Verificar a resposta: 201, com um id gerado pelo banco
+    assert response.status_code == 201, f"POST /owners com id no corpo deveria responder 201, respondeu {response.status_code}"
+    assert body["id"] != sent_id, f"o id devolvido deveria ser outro, não o {sent_id} enviado no corpo"
+
+    # Verificar o banco: a linha nova com os dados enviados, e nenhuma linha com o id enviado
+    new_row = db.execute(SELECT_OWNER_BY_ID, (body["id"],)).fetchone()
+    expected = (OWNER["firstName"], OWNER["lastName"], OWNER["address"], OWNER["city"], OWNER["telephone"])
+    assert new_row == expected, f"a linha nova {body['id']} deveria ser {expected}, é {new_row}"
+    assert db.execute(SELECT_OWNER_BY_ID, (sent_id,)).fetchone() is None, f"nenhuma linha deveria ter o id {sent_id}"

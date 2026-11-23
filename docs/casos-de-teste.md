@@ -231,7 +231,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Segurança – atribuição em massa (campo somente leitura) |
 | **Prioridade** | Alta |
 | **Objetivo** | Garantir que o id enviado no corpo é ignorado: o banco gera o id, e nenhum dono existente é sobrescrito. |
-| **Pré-condições** | Dono A criado via API. |
+| **Pré-condições** | Dono A gravado por SQL na fixture `prepared_owner` (tests/conftest.py). No pytest, um teste por id enviado. |
 | **Dados de teste** | Dono padrão com id = id do dono A; dono padrão com id = maior id de `owners` + 1000, lido do banco na hora. |
 | **Passos** | 1. Guardar a linha do dono A, lida do banco.<br>2. Enviar POST /api/owners com id = id do dono A.<br>3. Enviar POST /api/owners com id = maior id + 1000.<br>4. Conferir no banco o dono A, as linhas com os ids devolvidos e o id inexistente enviado. |
 | **Resultado esperado** | Passos 2 e 3: status 201, com um id no corpo diferente do enviado.<br>Passo 4: o dono A está igual ao do passo 1; há uma linha nova para cada id devolvido, com os dados enviados; nenhuma linha tem o id inexistente enviado. |
