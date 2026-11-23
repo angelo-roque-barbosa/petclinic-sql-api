@@ -517,3 +517,25 @@ def test_criar_dono_com_digito_no_nome_e_recusado_sem_gravar(api, db, owners_to_
     # Verificar o banco: nenhum dono novo
     count_after = db.execute(COUNT_OWNERS).fetchone()[0]
     assert count_after == count_before, f"o total de donos deveria continuar {count_before}, ficou {count_after}"
+
+
+@pytest.mark.parametrize("field", ["firstName", "lastName"])
+def test_criar_dono_com_nome_de_1_letra_grava_o_nome(api, db, owners_to_delete, field):
+    """CT-API-OWNERS-15: nome ou sobrenome com 1 letra, o menor tamanho do contrato, é aceito e gravado igual."""
+    # Preparar: o dono padrão com o campo no menor tamanho
+    payload = {**OWNER, field: "A"}
+    assert re.fullmatch(r"[A-Za-z]", payload[field]), "o valor do teste deveria ter exatamente 1 letra"
+
+    # Agir
+    response = api.post("/owners", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        owners_to_delete.append(body["id"])
+
+    # Verificar a resposta
+    assert response.status_code == 201, f"POST /owners com {field} de 1 letra deveria responder 201, respondeu {response.status_code}"
+
+    # Verificar o banco: a linha inteira, com o valor de 1 letra sem alteração
+    row = db.execute(SELECT_OWNER_BY_ID, (body["id"],)).fetchone()
+    expected = (payload["firstName"], payload["lastName"], payload["address"], payload["city"], payload["telephone"])
+    assert row == expected, f"a linha gravada deveria ser {expected}, é {row}"

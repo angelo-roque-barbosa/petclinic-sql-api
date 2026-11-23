@@ -134,8 +134,10 @@ execução; quando difere do esperado, a linha aponta o bug.
 | `telephone` (POST /api/owners) | 10 caracteres, com espaços | `608 555 10` | 400, nada gravado | 400, nada gravado |
 | `telephone` (POST /api/owners) | vazio (o `NOT NULL` do banco não barra) | `''` | 400, nada gravado | 400, nada gravado |
 | `firstName` (POST /api/owners) | vazio | `''` | 400, nada gravado | 400, nada gravado |
+| `firstName` (POST /api/owners) | menor tamanho válido | `A` (1 letra) | 201, gravado igual | 201, gravado igual |
 | `firstName` (POST /api/owners) | só espaços (o banco aceita) | `'   '` | 400, nada gravado | 400, nada gravado |
 | `lastName` (POST /api/owners) | vazio | `''` | 400, nada gravado | 400, nada gravado |
+| `lastName` (POST /api/owners) | menor tamanho válido | `A` (1 letra) | 201, gravado igual | 201, gravado igual |
 | `lastName` (POST /api/owners) | só espaços (o banco aceita) | `'   '` | 400, nada gravado | 400, nada gravado |
 | `firstName` (POST /api/owners) | no limite (no banco, `text` sem limite) | 30 letras | 201, gravado inteiro | 201, gravado inteiro |
 | `firstName` (POST /api/owners) | acima do limite | 31 letras | 400, nada gravado | 400, nada gravado |
