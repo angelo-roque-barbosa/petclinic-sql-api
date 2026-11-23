@@ -355,7 +355,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – validação (valor-limite) |
 | **Prioridade** | Baixa |
 | **Objetivo** | Garantir que a API aceita pet com até 50 anos e recusa data de nascimento mais antiga. |
-| **Pré-condições** | Dono padrão e tipo criados via API. |
+| **Pré-condições** | Dono, sem pets, e tipo gravados por SQL nas fixtures `prepared_owner` e `prepared_pet_type` (tests/conftest.py). |
 | **Dados de teste** | birthDate = 1800-01-01, exatamente 50 anos atrás e 50 anos e 1 dia atrás (datas calculadas em UTC na hora do teste). |
 | **Passos** | 1. Para cada data, enviar POST /api/owners/{ownerId}/pets.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | Exatamente 50 anos: status 201 e data gravada igual.<br>1800-01-01 e 50 anos e 1 dia: status 400 e nenhum pet novo. |

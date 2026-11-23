@@ -215,3 +215,69 @@ def test_criar_pet_nascido_no_futuro_e_recusado_sem_gravar(api, db, prepared_own
     # Verificar o banco: o dono, criado sem pets, continua sem pets
     pets_of_owner = db.execute(COUNT_PETS_BY_OWNER, (owner_id,)).fetchone()[0]
     assert pets_of_owner == 0, f"o dono {owner_id} deveria continuar sem pets, tem {pets_of_owner}"
+
+
+def fifty_years_ago_utc():
+    """A data de exatamente 50 anos atrás, em UTC. Num 29 de fevereiro, volta para o 28, porque o ano de 50
+    anos atrás pode não ser bissexto."""
+    today = today_utc()
+    try:
+        return today.replace(year=today.year - 50)
+    except ValueError:
+        return today.replace(year=today.year - 50, day=28)
+
+
+def test_criar_pet_com_exatamente_50_anos_grava_a_data(api, db, prepared_owner, prepared_pet_type, pets_to_delete):
+    """CT-API-PETS-06: um pet com exatamente 50 anos, o limite da API, é aceito e gravado com a data enviada."""
+    # Preparar: o pet padrão nascido há exatamente 50 anos, em UTC; o dono e o tipo vêm das fixtures
+    owner_id = prepared_owner
+    birth = fifty_years_ago_utc()
+    payload = {**PET, "birthDate": birth.isoformat(), "type": {"id": prepared_pet_type, "name": PREPARED_PET_TYPE_NAME}}
+
+    # Agir
+    response = api.post(f"/owners/{owner_id}/pets", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        pets_to_delete.append(body["id"])
+
+    # Verificar a resposta
+    assert response.status_code == 201, f"POST de pet nascido em {birth} deveria responder 201, respondeu {response.status_code}"
+
+    # Verificar o banco: a linha inteira, com a data de 50 anos atrás
+    row = db.execute(SELECT_PET_BY_ID, (body["id"],)).fetchone()
+    expected = (PET["name"], birth, owner_id, prepared_pet_type)
+    assert row == expected, f"a linha do pet {body['id']} deveria ser {expected}, é {row}"
+
+
+@pytest.mark.parametrize(
+    "birth",
+    [
+        pytest.param(lambda: fifty_years_ago_utc() - timedelta(days=1), id="50-anos-e-1-dia"),
+        pytest.param(lambda: date(1800, 1, 1), id="1800-01-01"),
+    ],
+)
+def test_criar_pet_com_mais_de_50_anos_e_recusado_sem_gravar(api, db, prepared_owner, prepared_pet_type, pets_to_delete, birth):
+    """CT-API-PETS-06: um pet com mais de 50 anos responde 400 apontando birthDate e não grava pet."""
+    # Preparar: a data calculada na hora do teste, sempre antes do limite de 50 anos
+    owner_id = prepared_owner
+    birth_date = birth()
+    assert birth_date < fifty_years_ago_utc(), "a data do teste deveria ser anterior ao limite de 50 anos"
+    payload = {**PET, "birthDate": birth_date.isoformat(), "type": {"id": prepared_pet_type, "name": PREPARED_PET_TYPE_NAME}}
+
+    # Agir
+    response = api.post(f"/owners/{owner_id}/pets", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        pets_to_delete.append(body["id"])
+
+    # Verificar a resposta: 400, e o erro aponta só a data
+    assert response.status_code == 400, f"POST de pet nascido em {birth_date} deveria responder 400, respondeu {response.status_code}"
+    errors = body.get("schemaValidationErrors") or []
+    assert errors, "a resposta deveria listar os erros de validação"
+    assert {error["field"] for error in errors} == {"birthDate"}, (
+        f"o erro deveria apontar só birthDate, apontou {sorted({error['field'] for error in errors})}"
+    )
+
+    # Verificar o banco: o dono, criado sem pets, continua sem pets
+    pets_of_owner = db.execute(COUNT_PETS_BY_OWNER, (owner_id,)).fetchone()[0]
+    assert pets_of_owner == 0, f"o dono {owner_id} deveria continuar sem pets, tem {pets_of_owner}"
