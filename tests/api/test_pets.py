@@ -306,3 +306,36 @@ def test_criar_pet_para_dono_inexistente_responde_404_sem_gravar(api, db, prepar
     pets_after = db.execute(COUNT_PETS).fetchone()[0]
     assert pets_after == pets_before, f"o total de pets deveria continuar {pets_before}, ficou {pets_after}"
     assert db.execute(SELECT_OWNER_BY_ID, (missing_owner_id,)).fetchone() is None, f"o POST não deveria criar o dono {missing_owner_id}"
+
+
+# Pergunta: qual é o maior id da tabela `types` hoje?
+# Devolve uma linha só, com um único valor: o maior id.
+SELECT_MAX_PET_TYPE_ID = """
+SELECT MAX(id) FROM types;
+"""
+
+
+def test_criar_pet_com_tipo_inexistente_e_recusado_sem_gravar(api, db, prepared_owner, prepared_pet_type, pets_to_delete):
+    """CT-API-PETS-09: criar um pet com um tipo que não existe responde 4xx e não grava pet nem cria o tipo.
+
+    Hoje a resposta é 404, mas a recusa vem do banco, e não de uma validação da API: é a OBS-02."""
+    # Preparar: um id de tipo que não existe, lido do banco na hora (o maior id + 1); o dono vem da fixture
+    owner_id = prepared_owner
+    max_type_before = db.execute(SELECT_MAX_PET_TYPE_ID).fetchone()[0]
+    missing_type_id = max_type_before + 1
+    payload = {**PET, "type": {"id": missing_type_id, "name": "fantasma"}}
+
+    # Agir
+    response = api.post(f"/owners/{owner_id}/pets", json=payload)
+    body = response.json() if response.content else {}
+    if isinstance(body, dict) and "id" in body:
+        pets_to_delete.append(body["id"])
+
+    # Verificar a resposta: erro do cliente (o caso aceita 400 ou 404)
+    assert response.status_code in (400, 404), f"POST de pet com tipo inexistente deveria responder 400 ou 404, respondeu {response.status_code}"
+
+    # Verificar o banco: o dono continua sem pets, e nenhum tipo novo foi criado
+    pets_of_owner = db.execute(COUNT_PETS_BY_OWNER, (owner_id,)).fetchone()[0]
+    assert pets_of_owner == 0, f"o dono {owner_id} deveria continuar sem pets, tem {pets_of_owner}"
+    max_type_after = db.execute(SELECT_MAX_PET_TYPE_ID).fetchone()[0]
+    assert max_type_after == max_type_before, f"nenhum tipo deveria ser criado: o maior id era {max_type_before}, ficou {max_type_after}"

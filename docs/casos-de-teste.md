@@ -400,7 +400,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – negativo (validação) |
 | **Prioridade** | Média |
 | **Objetivo** | Garantir que a API recusa um tipo que não existe como erro do cliente. |
-| **Pré-condições** | Dono padrão criado via API. |
+| **Pré-condições** | Dono, sem pets, gravado por SQL na fixture `prepared_owner` (tests/conftest.py). |
 | **Dados de teste** | type.id inexistente: maior id de `types` + 1, lido do banco na hora. |
 | **Passos** | 1. Enviar POST /api/owners/{ownerId}/pets com esse tipo.<br>2. Verificar a resposta e os pets do dono no banco. |
 | **Resultado esperado** | Status 4xx (400 ou 404) e zero pets. |
