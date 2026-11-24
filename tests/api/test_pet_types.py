@@ -2,7 +2,7 @@
 
 import pytest
 
-from conftest import SECOND_PET_TYPE_NAME
+from conftest import COUNT_PETS, SECOND_PET_TYPE_NAME
 
 # Tipo padrão: o contrato só aceita letras, espaços, hífen e apóstrofo no nome, então não há sufixo numérico.
 # "coelho" não existe no populateDB.sql nem nas fixtures (chinchila e furão), e cada teste apaga o tipo que criou.
@@ -158,3 +158,30 @@ def test_atualizar_tipo_de_pet_grava_o_novo_nome_na_mesma_linha(api, db, prepare
     assert types_after == types_before, f"o total de tipos deveria continuar {types_before}, ficou {types_after}"
     control = db.execute(SELECT_PET_TYPE_BY_ID, (second_pet_type,)).fetchone()
     assert control == (SECOND_PET_TYPE_NAME,), f"o tipo de controle {second_pet_type} deveria continuar ({SECOND_PET_TYPE_NAME!r},), é {control}"
+
+
+def test_apagar_tipo_de_pet_sem_pets_remove_so_esse_tipo(api, db, prepared_pet_type, second_pet_type):
+    """CT-API-PET-TYPES-07: apagar um tipo de pet sem pets responde 204 e remove só esse tipo. O tipo da
+    fixture second_pet_type é o controle, e o total de pets também é conferido, porque apagar um tipo apaga os
+    pets dele (BUG-07)."""
+    # Preparar: os dois tipos, sem pets, vêm das fixtures; aqui só os totais antes
+    type_id = prepared_pet_type
+    types_before = db.execute(COUNT_PET_TYPES).fetchone()[0]
+    pets_before = db.execute(COUNT_PETS).fetchone()[0]
+
+    # Agir
+    response = api.delete(f"/pettypes/{type_id}")
+
+    # Verificar a resposta
+    assert response.status_code == 204, f"DELETE /pettypes/{type_id} deveria responder 204, respondeu {response.status_code}"
+
+    # Verificar o banco: o tipo não existe mais e saiu exatamente um tipo
+    assert db.execute(SELECT_PET_TYPE_BY_ID, (type_id,)).fetchone() is None, f"o tipo {type_id} não deveria mais existir"
+    types_after = db.execute(COUNT_PET_TYPES).fetchone()[0]
+    assert types_after == types_before - 1, f"o total de tipos deveria cair para {types_before - 1}, ficou {types_after}"
+
+    # o controle continua com o nome dele e nenhum pet sumiu
+    control = db.execute(SELECT_PET_TYPE_BY_ID, (second_pet_type,)).fetchone()
+    assert control == (SECOND_PET_TYPE_NAME,), f"o tipo de controle {second_pet_type} deveria continuar ({SECOND_PET_TYPE_NAME!r},), é {control}"
+    pets_after = db.execute(COUNT_PETS).fetchone()[0]
+    assert pets_after == pets_before, f"o total de pets deveria continuar {pets_before}, ficou {pets_after}"

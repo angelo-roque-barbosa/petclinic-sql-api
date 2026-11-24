@@ -752,7 +752,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – efeito no servidor |
 | **Prioridade** | Baixa |
 | **Objetivo** | Garantir que a exclusão remove o tipo. |
-| **Pré-condições** | Tipo sem pets criado via API. |
+| **Pré-condições** | Dois tipos sem pets gravados por SQL nas fixtures `prepared_pet_type` e `second_pet_type` (tests/conftest.py). O segundo é o controle e não pode mudar. |
 | **Dados de teste** | Id do tipo. |
 | **Passos** | 1. Enviar DELETE /api/pettypes/{id}.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | Status 2xx e nenhuma linha de `types` com esse id. |
