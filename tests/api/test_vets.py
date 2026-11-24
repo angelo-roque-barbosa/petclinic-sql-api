@@ -243,23 +243,37 @@ CONTROL_VET = {"first_name": "Marcos", "last_name": "Lima"}
 
 
 @pytest.fixture
-def vet_with_a_and_b_and_control(db, prepared_specialty, second_specialty, third_specialty, prepared_vet):
+def control_vet(db):
+    """Grava direto no banco o veterinário de controle (CONTROL_VET), sem especialidades, e entrega o id. No
+    fim, apaga as ligações dele (um cenário pode ter acrescentado) e depois o veterinário; apagar zero linhas
+    também serve.
+
+    Quando o controle é ligado a especialidades de fixtures, peça esta fixture depois das de especialidade,
+    para ele sair antes delas."""
+    vet_id = db.execute(INSERT_VET, (CONTROL_VET["first_name"], CONTROL_VET["last_name"])).fetchone()[0]
+    yield vet_id
+    db.execute(DELETE_VET_SPECIALTIES_BY_VET, (vet_id,))
+    db.execute(DELETE_VET, (vet_id,))
+
+
+@pytest.fixture
+def vet_with_a_and_b_and_control(db, prepared_specialty, second_specialty, third_specialty, prepared_vet, control_vet):
     """Liga por SQL o veterinário da fixture prepared_vet às especialidades A (prepared_specialty) e B
-    (second_specialty), e grava um veterinário de controle ligado a A. A terceira especialidade (C,
+    (second_specialty), e o veterinário de controle (control_vet) a A. A terceira especialidade (C,
     third_specialty) fica sem veterinários. Entrega os ids.
 
-    No fim, apaga as ligações e o veterinário de controle; o outro veterinário e as especialidades são
-    apagados depois, pelas fixtures de que esta depende, na ordem inversa em que foram pedidas."""
-    created = {"vet_id": prepared_vet, "a": prepared_specialty, "b": second_specialty, "c": third_specialty}
+    As ligações são apagadas pelas fixtures dos veterinários, que saem antes das especialidades, porque as
+    fixtures são desmontadas na ordem inversa em que foram pedidas."""
     db.execute(INSERT_VET_SPECIALTY, (prepared_vet, prepared_specialty))
     db.execute(INSERT_VET_SPECIALTY, (prepared_vet, second_specialty))
-    created["control_vet_id"] = db.execute(
-        INSERT_VET, (CONTROL_VET["first_name"], CONTROL_VET["last_name"])
-    ).fetchone()[0]
-    db.execute(INSERT_VET_SPECIALTY, (created["control_vet_id"], prepared_specialty))
-    yield created
-    db.execute(DELETE_VET_SPECIALTIES_BY_VET, (created["control_vet_id"],))
-    db.execute(DELETE_VET, (created["control_vet_id"],))
+    db.execute(INSERT_VET_SPECIALTY, (control_vet, prepared_specialty))
+    yield {
+        "vet_id": prepared_vet,
+        "control_vet_id": control_vet,
+        "a": prepared_specialty,
+        "b": second_specialty,
+        "c": third_specialty,
+    }
 
 
 def test_trocar_especialidades_do_veterinario_grava_exatamente_a_nova_lista(api, db, vet_with_a_and_b_and_control):

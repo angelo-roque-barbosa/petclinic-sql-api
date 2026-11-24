@@ -1015,7 +1015,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – efeito no servidor |
 | **Prioridade** | Média |
 | **Objetivo** | Garantir que a atualização deixa em `vet_specialties` exatamente o novo conjunto, sem sobras nem repetição. |
-| **Pré-condições** | Três especialidades (A, B, C), um vet com A e B e um vet de controle com A, gravados por SQL: as fixtures `prepared_specialty`, `second_specialty`, `third_specialty` e `prepared_vet` (tests/conftest.py) e a fixture local `vet_with_a_and_b_and_control` (tests/api/test_vets.py), que grava as ligações e o controle. |
+| **Pré-condições** | Três especialidades (A, B, C), um vet com A e B e um vet de controle com A, gravados por SQL: as fixtures `prepared_specialty`, `second_specialty`, `third_specialty` e `prepared_vet` (tests/conftest.py) e as fixtures locais `control_vet` e `vet_with_a_and_b_and_control` (tests/api/test_vets.py), que gravam o controle e as ligações. |
 | **Dados de teste** | Nova lista: B e C. |
 | **Passos** | 1. Enviar PUT /api/vets/{id} com a nova lista.<br>2. Verificar a resposta.<br>3. Buscar no banco as ligações do vet. |
 | **Resultado esperado** | Status 2xx e exatamente duas ligações: B e C. |
