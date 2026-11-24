@@ -2,7 +2,17 @@
 
 import pytest
 
-from conftest import PREPARED_SPECIALTY_NAME, PREPARED_VET, SECOND_SPECIALTY_NAME
+from conftest import (
+    COUNT_VET_SPECIALTIES,
+    DELETE_VET,
+    DELETE_VET_SPECIALTIES_BY_VET,
+    INSERT_VET,
+    INSERT_VET_SPECIALTY,
+    PREPARED_SPECIALTY_NAME,
+    PREPARED_VET,
+    SECOND_SPECIALTY_NAME,
+    THIRD_SPECIALTY_NAME,
+)
 
 # Veterinário padrão do docs/casos-de-teste.md: nome e sobrenome só com letras. As especialidades são as das
 # fixtures, montadas em cada teste.
@@ -225,3 +235,65 @@ def test_criar_veterinario_com_especialidade_repetida_grava_uma_ligacao_so(api, 
     assert row == expected, f"a linha do veterinário {body['id']} deveria ser {expected}, é {row}"
     links = db.execute(SELECT_SPECIALTY_IDS_BY_VET, (body["id"],)).fetchall()
     assert links == [(prepared_specialty,)], f"o veterinário {body['id']} deveria ter uma ligação só, com {prepared_specialty}; tem {links}"
+
+
+# Veterinário de controle do CT-API-VETS-07: tem a especialidade A, como o veterinário atualizado, e tem de
+# continuar com ela.
+CONTROL_VET = {"first_name": "Marcos", "last_name": "Lima"}
+
+
+@pytest.fixture
+def vet_with_a_and_b_and_control(db, prepared_specialty, second_specialty, third_specialty, prepared_vet):
+    """Liga por SQL o veterinário da fixture prepared_vet às especialidades A (prepared_specialty) e B
+    (second_specialty), e grava um veterinário de controle ligado a A. A terceira especialidade (C,
+    third_specialty) fica sem veterinários. Entrega os ids.
+
+    No fim, apaga as ligações e o veterinário de controle; o outro veterinário e as especialidades são
+    apagados depois, pelas fixtures de que esta depende, na ordem inversa em que foram pedidas."""
+    created = {"vet_id": prepared_vet, "a": prepared_specialty, "b": second_specialty, "c": third_specialty}
+    db.execute(INSERT_VET_SPECIALTY, (prepared_vet, prepared_specialty))
+    db.execute(INSERT_VET_SPECIALTY, (prepared_vet, second_specialty))
+    created["control_vet_id"] = db.execute(
+        INSERT_VET, (CONTROL_VET["first_name"], CONTROL_VET["last_name"])
+    ).fetchone()[0]
+    db.execute(INSERT_VET_SPECIALTY, (created["control_vet_id"], prepared_specialty))
+    yield created
+    db.execute(DELETE_VET_SPECIALTIES_BY_VET, (created["control_vet_id"],))
+    db.execute(DELETE_VET, (created["control_vet_id"],))
+
+
+def test_trocar_especialidades_do_veterinario_grava_exatamente_a_nova_lista(api, db, vet_with_a_and_b_and_control):
+    """CT-API-VETS-07: o PUT de um veterinário com A e B trocando a lista para B e C responde 204 e deixa
+    exatamente as ligações B e C. O veterinário de controle, que também tem A, continua com ela, e o total de
+    ligações não muda (sai A, entra C)."""
+    # Preparar: o cenário vem da fixture; o corpo repete o nome e traz a nova lista
+    scenario = vet_with_a_and_b_and_control
+    vet_id = scenario["vet_id"]
+    payload = {
+        "firstName": PREPARED_VET["first_name"],
+        "lastName": PREPARED_VET["last_name"],
+        "specialties": [
+            {"id": scenario["b"], "name": SECOND_SPECIALTY_NAME},
+            {"id": scenario["c"], "name": THIRD_SPECIALTY_NAME},
+        ],
+    }
+    links_before = db.execute(COUNT_VET_SPECIALTIES).fetchone()[0]
+
+    # Agir
+    response = api.put(f"/vets/{vet_id}", json=payload)
+
+    # Verificar a resposta
+    assert response.status_code == 204, f"PUT /vets/{vet_id} deveria responder 204, respondeu {response.status_code}"
+
+    # Verificar o banco: o veterinário tem exatamente B e C
+    links = db.execute(SELECT_SPECIALTY_IDS_BY_VET, (vet_id,)).fetchall()
+    expected_links = [(specialty_id,) for specialty_id in sorted((scenario["b"], scenario["c"]))]
+    assert links == expected_links, f"o veterinário {vet_id} deveria ter exatamente as ligações {expected_links}, tem {links}"
+
+    # o controle continua com A, e o total de ligações não muda
+    control_links = db.execute(SELECT_SPECIALTY_IDS_BY_VET, (scenario["control_vet_id"],)).fetchall()
+    assert control_links == [(scenario["a"],)], (
+        f"o veterinário de controle {scenario['control_vet_id']} deveria continuar só com {scenario['a']}, tem {control_links}"
+    )
+    links_after = db.execute(COUNT_VET_SPECIALTIES).fetchone()[0]
+    assert links_after == links_before, f"o total de ligações deveria continuar {links_before}, ficou {links_after}"
