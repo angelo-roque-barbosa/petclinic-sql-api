@@ -217,6 +217,17 @@ DELETE_SPECIALTY = """
 DELETE FROM specialties WHERE id = %s;
 """
 
+# Pergunta: como apagar todas as ligações de um veterinário com especialidades? Recebe o id do veterinário (%s)
+# e apaga as linhas de `vet_specialties` dele, quantas forem (zero também serve).
+DELETE_VET_SPECIALTIES_BY_VET = """
+DELETE FROM vet_specialties WHERE vet_id = %s;
+"""
+
+# Pergunta: como apagar o veterinário com um id? Recebe o id (%s).
+DELETE_VET = """
+DELETE FROM vets WHERE id = %s;
+"""
+
 # Pergunta: como gravar uma visita nova de um pet e receber o id gerado?
 # Recebe, nesta ordem, pet_id, visit_date e description (três %s)
 # e devolve uma linha com um valor só: o id criado.
@@ -311,6 +322,22 @@ def specialties_to_delete(db):
     yield ids
     for specialty_id in ids:
         db.execute(DELETE_SPECIALTY, (specialty_id,))
+
+
+@pytest.fixture
+def vets_to_delete(db):
+    """Lista de ids de veterinários criados pela API no teste. No fim, apaga por SQL as ligações de cada um em
+    `vet_specialties` e depois o veterinário, nessa ordem por causa da chave estrangeira; apagar zero linhas
+    também serve.
+
+    Quando o veterinário usa especialidades de fixtures, ele tem de ser apagado antes delas: peça esta fixture
+    depois das de especialidade (por exemplo, `prepared_specialty, second_specialty, vets_to_delete`), porque
+    o pytest desmonta as fixtures na ordem inversa em que foram pedidas."""
+    ids = []
+    yield ids
+    for vet_id in ids:
+        db.execute(DELETE_VET_SPECIALTIES_BY_VET, (vet_id,))
+        db.execute(DELETE_VET, (vet_id,))
 
 
 @pytest.fixture
