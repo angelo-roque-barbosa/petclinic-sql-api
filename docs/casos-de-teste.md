@@ -971,12 +971,12 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – regra de negócio |
 | **Prioridade** | Baixa |
 | **Objetivo** | Garantir que dois veterinários homônimos ficam como registros separados, sem um sobrescrever o outro. |
-| **Pré-condições** | Vet com nome e sobrenome únicos criado via API. |
+| **Pré-condições** | Vet com nome e sobrenome que não existem no seed (`Helena Costa`), gravado por SQL na fixture `prepared_vet` (tests/conftest.py). |
 | **Dados de teste** | O mesmo nome e sobrenome. |
 | **Passos** | 1. Enviar POST /api/vets com o mesmo nome e sobrenome.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | Status 2xx; duas linhas com esse nome, com ids diferentes; a primeira sem alteração. |
 | **Status** | Não executado |
-| **Observações** | Exceção à regra geral de recusa: pessoas diferentes podem ter o mesmo nome.<br>Dicionário: o banco aceita (sem UNIQUE).<br>Regra adotada em 2026-11-23: homônimos são permitidos, porque um veterinário é uma pessoa, não um item de catálogo como tipo e especialidade (BUG-14 e BUG-15). Em 2026-11-23, o segundo POST respondeu 201 com outro id e o primeiro ficou intacto; `James Carter`, do seed, também ganhou um homônimo. Na coleção do Postman: `CT-API-VETS-04`, que cria o primeiro com o mesmo corpo do request. |
+| **Observações** | Exceção à regra geral de recusa: pessoas diferentes podem ter o mesmo nome.<br>Dicionário: o banco aceita (sem UNIQUE).<br>Regra adotada em 2026-11-23: homônimos são permitidos, porque um veterinário é uma pessoa, não um item de catálogo como tipo e especialidade (BUG-14 e BUG-15). Em 2026-11-23, o segundo POST respondeu 201 com outro id e o primeiro ficou intacto; `James Carter`, do seed, também ganhou um homônimo. Na coleção do Postman: `CT-API-VETS-04`, que cria o primeiro com o mesmo corpo do request. No pytest, o primeiro vem da fixture e o teste faz só o segundo envio, para manter uma chamada à API por teste. |
 
 #### CT-API-VETS-05 — Criar veterinário com especialidade repetida na lista
 

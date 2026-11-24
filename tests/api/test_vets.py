@@ -2,7 +2,7 @@
 
 import pytest
 
-from conftest import PREPARED_SPECIALTY_NAME, SECOND_SPECIALTY_NAME
+from conftest import PREPARED_SPECIALTY_NAME, PREPARED_VET, SECOND_SPECIALTY_NAME
 
 # Veterinário padrão do docs/casos-de-teste.md: nome e sobrenome só com letras. As especialidades são as das
 # fixtures, montadas em cada teste.
@@ -168,3 +168,33 @@ def test_criar_veterinario_com_nome_fora_do_padrao_ou_do_limite_e_recusado_sem_g
     # Verificar o banco: o total de veterinários não muda
     vets_after = db.execute(COUNT_VETS).fetchone()[0]
     assert vets_after == vets_before, f"o total de veterinários deveria continuar {vets_before}, ficou {vets_after}"
+
+
+def test_criar_veterinario_homonimo_grava_outro_sem_mudar_o_primeiro(api, db, prepared_vet, vets_to_delete):
+    """CT-API-VETS-04: criar um veterinário com o mesmo nome e sobrenome de outro responde 201 com outro id, e
+    o primeiro continua igual.
+
+    Regra adotada: homônimos são permitidos, porque um veterinário é uma pessoa, não um item de catálogo como
+    tipo e especialidade (BUG-14 e BUG-15)."""
+    # Preparar: o primeiro veterinário foi gravado por SQL pela fixture; o envio repete o nome e o sobrenome
+    existing_row = (PREPARED_VET["first_name"], PREPARED_VET["last_name"])
+    payload = {"firstName": PREPARED_VET["first_name"], "lastName": PREPARED_VET["last_name"], "specialties": []}
+    vets_before = db.execute(COUNT_VETS).fetchone()[0]
+
+    # Agir
+    response = api.post("/vets", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        vets_to_delete.append(body["id"])
+
+    # Verificar a resposta: criado, com um id diferente do do veterinário existente
+    assert response.status_code == 201, f"POST /vets de um homônimo deveria responder 201, respondeu {response.status_code}"
+    assert body["id"] != prepared_vet, f"o homônimo deveria ter outro id, veio o mesmo do existente ({prepared_vet})"
+
+    # Verificar o banco: um veterinário a mais, o novo gravado como enviado e o existente sem mudança
+    vets_after = db.execute(COUNT_VETS).fetchone()[0]
+    assert vets_after == vets_before + 1, f"o total de veterinários deveria subir para {vets_before + 1}, ficou {vets_after}"
+    new_row = db.execute(SELECT_VET_BY_ID, (body["id"],)).fetchone()
+    assert new_row == existing_row, f"o veterinário novo {body['id']} deveria ser {existing_row}, é {new_row}"
+    row_after = db.execute(SELECT_VET_BY_ID, (prepared_vet,)).fetchone()
+    assert row_after == existing_row, f"o veterinário existente {prepared_vet} deveria continuar {existing_row}, é {row_after}"
