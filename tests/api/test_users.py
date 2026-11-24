@@ -3,6 +3,8 @@
 A API só tem POST /api/users: o que o teste confere (ativo, papéis) só existe no banco, e a limpeza é feita
 direto nele, pela fixture users_to_delete."""
 
+import pytest
+
 # Usuário padrão: username que não existe no seed (só há `admin`), com até 20 caracteres, o limite do banco.
 USER = {"username": "qaclara", "password": "Segredo123", "enabled": True, "roles": [{"name": "ROLE_OWNER_ADMIN"}]}
 
@@ -43,3 +45,50 @@ def test_criar_usuario_com_papel_valido_grava_ativo_e_com_o_papel(api, db, users
     assert row == expected, f"a linha do usuário {payload['username']!r} deveria ser {expected}, é {row}"
     roles = db.execute(SELECT_ROLES_BY_USERNAME, (payload["username"],)).fetchall()
     assert roles == [("ROLE_OWNER_ADMIN",)], f"o usuário {payload['username']!r} deveria ter só ROLE_OWNER_ADMIN, tem {roles}"
+
+
+# Pergunta: quantos usuários existem hoje?
+# Devolve uma linha só, com um único valor: o total de linhas de `users`.
+COUNT_USERS = """
+SELECT COUNT(*) FROM users;
+"""
+
+
+@pytest.mark.parametrize(
+    "username",
+    [
+        pytest.param(None, id="sem-username"),
+        pytest.param("", id="username-vazio"),
+    ],
+)
+def test_criar_usuario_sem_username_e_recusado_sem_gravar(api, db, users_to_delete, username):
+    """CT-API-USERS-02: criar um usuário sem username ou com username vazio responde 400 apontando o campo
+    `username` e não grava usuário nenhum.
+
+    Username só com espaços também deveria ser recusado, mas hoje é aceito: é o BUG-19, coberto pelo
+    CT-BUG-19-01."""
+    # Preparar: o usuário padrão sem o campo (None) ou com ele vazio; um username enviado fica registrado para a
+    # limpeza, caso a API o grave
+    payload = dict(USER)
+    if username is None:
+        del payload["username"]
+    else:
+        payload["username"] = username
+        users_to_delete.append(username)
+    users_before = db.execute(COUNT_USERS).fetchone()[0]
+
+    # Agir
+    response = api.post("/users", json=payload)
+    body = response.json()
+
+    # Verificar a resposta: 400, e o erro aponta só o campo username
+    assert response.status_code == 400, f"POST /users com username {username!r} deveria responder 400, respondeu {response.status_code}"
+    errors = body.get("schemaValidationErrors") or []
+    assert errors, "a resposta deveria listar os erros de validação"
+    assert {error["field"] for error in errors} == {"username"}, (
+        f"o erro deveria apontar só username, apontou {sorted({error['field'] for error in errors})}"
+    )
+
+    # Verificar o banco: o total de usuários não muda
+    users_after = db.execute(COUNT_USERS).fetchone()[0]
+    assert users_after == users_before, f"o total de usuários deveria continuar {users_before}, ficou {users_after}"

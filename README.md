@@ -182,6 +182,9 @@ execução; quando difere do esperado, a linha aponta o bug.
 | `firstName` (POST de veterinário) | acima do limite | 31 letras | 400, nada gravado | 400, nada gravado |
 | `firstName` (POST de veterinário) | fora do `pattern`: dígito | `'Ana2'` | 400, nada gravado | 400, nada gravado |
 | `firstName` (POST de veterinário) | só espaços (o banco aceita) | `'   '` | 400, nada gravado | 400, nada gravado |
+| `username` (POST de usuário) | ausente | sem o campo | 400, nada gravado | 400, nada gravado |
+| `username` (POST de usuário) | vazio (o banco aceita) | `''` | 400, nada gravado | 400, nada gravado |
+| `username` (POST de usuário) | só espaços (o banco aceita) | `'   '` | 400, nada gravado | 201, gravado com papel (BUG-19) |
 
 ## Achados
 

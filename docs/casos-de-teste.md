@@ -1120,7 +1120,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Contar as linhas de `users`.<br>2. Para cada variação, enviar POST /api/users.<br>3. Verificar cada resposta e contar de novo. |
 | **Resultado esperado** | Status 400 em todos e mesma contagem. |
 | **Status** | Não executado |
-| **Observações** | Dicionário: o banco aceita username `''`.<br>Em 2026-11-24, sem o campo e com `''` a resposta foi 400 apontando `username`, sem gravar nada; `'   '` foi aceito com 201 e gravado com o papel: é o BUG-19 (CT-BUG-19-01). |
+| **Observações** | Dicionário: o banco aceita username `''`.<br>Em 2026-11-24, sem o campo e com `''` a resposta foi 400 apontando `username`, sem gravar nada; `'   '` foi aceito com 201 e gravado com o papel: é o BUG-19 (CT-BUG-19-01). No pytest entram só o campo ausente e `''` (`test_criar_usuario_sem_username_e_recusado_sem_gravar`), para a suíte continuar sem falhas conhecidas. |
 
 #### CT-API-USERS-03 — Username no limite de 20 caracteres
 
