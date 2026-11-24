@@ -693,7 +693,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – validação (valor-limite) |
 | **Prioridade** | Baixa |
 | **Objetivo** | Garantir que o limite do contrato vale e que o nome aceito é gravado inteiro. |
-| **Dados de teste** | name com 80 e com 81 caracteres. |
+| **Dados de teste** | name com 80 e com 81 caracteres. No pytest, o 80 roda também com letras acentuadas (160 bytes), para pegar um limite contado em bytes. |
 | **Passos** | 1. Para cada tamanho, enviar POST /api/pettypes.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | 80: status 2xx e nome gravado com 80 caracteres.<br>81: status 400 e nenhum tipo novo. |
 | **Status** | Não executado |
