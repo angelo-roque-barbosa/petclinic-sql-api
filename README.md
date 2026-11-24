@@ -185,6 +185,9 @@ execução; quando difere do esperado, a linha aponta o bug.
 | `username` (POST de usuário) | ausente | sem o campo | 400, nada gravado | 400, nada gravado |
 | `username` (POST de usuário) | vazio (o banco aceita) | `''` | 400, nada gravado | 400, nada gravado |
 | `username` (POST de usuário) | só espaços (o banco aceita) | `'   '` | 400, nada gravado | 201, gravado com papel (BUG-19) |
+| `username` (POST de usuário) | no limite do banco (`varchar(20)`) | 20 caracteres | 201, gravado inteiro | 201, gravado inteiro |
+| `username` (POST de usuário) | acima do banco, dentro do contrato (até 80) | 21 e 80 caracteres | 400, nada gravado | 404, nada gravado (BUG-20) |
+| `username` (POST de usuário) | acima do contrato | 81 caracteres | 400, nada gravado | 400, nada gravado |
 
 ## Achados
 

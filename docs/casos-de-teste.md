@@ -1130,11 +1130,11 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – validação (valor-limite) |
 | **Prioridade** | Alta |
 | **Objetivo** | Garantir que o limite real (20 do banco) é validado pela API e não vira erro 500. |
-| **Dados de teste** | username único com 20 e com 21 caracteres. |
+| **Dados de teste** | username que não existe no seed, com 20 e com 21 caracteres. No pytest, o 21 dá lugar ao 81 (acima do limite do contrato), porque de 21 a 80 a resposta é o BUG-20. |
 | **Passos** | 1. Para cada tamanho, enviar POST /api/users.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | 20: status 2xx e username gravado com 20 caracteres.<br>21: status 400 e nenhum usuário novo. |
 | **Status** | Não executado |
-| **Observações** | O contrato aceita até 80 e o banco recusa acima de 20 (`varchar(20)`): de 21 a 80, o erro tende a chegar ao banco.<br>Em 2026-11-24, 20 caracteres responderam 201 e foram gravados inteiros; 21 e 80 responderam 404 com `DataIntegrityViolationException`, sem gravar nada; 81 respondeu 400 apontando `username`. É o BUG-20 (CT-BUG-20-01). |
+| **Observações** | O contrato aceita até 80 e o banco recusa acima de 20 (`varchar(20)`): de 21 a 80, o erro tende a chegar ao banco.<br>Em 2026-11-24, 20 caracteres responderam 201 e foram gravados inteiros; 21 e 80 responderam 404 com `DataIntegrityViolationException`, sem gravar nada; 81 respondeu 400 apontando `username`. É o BUG-20 (CT-BUG-20-01). No pytest entram o 20 e o 81, para a suíte continuar sem falhas conhecidas. |
 
 #### CT-API-USERS-04 — Criar usuário sem senha
 
