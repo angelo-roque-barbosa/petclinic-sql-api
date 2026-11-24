@@ -1060,7 +1060,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – regra de negócio |
 | **Prioridade** | Alta |
 | **Objetivo** | Garantir que a exclusão de um vet com especialidade não vira 500 nem deixa ligação órfã. |
-| **Pré-condições** | Especialidade e vet com ela, criados via API. |
+| **Pré-condições** | Especialidade, vet com ela e vet de controle com a mesma especialidade, gravados por SQL: as fixtures `prepared_specialty` e `prepared_vet` (tests/conftest.py) e as fixtures locais `vet_with_specialty`, `control_vet` e `vet_and_control_with_specialty` (tests/api/test_vets.py). |
 | **Dados de teste** | Id do vet. |
 | **Passos** | 1. Enviar DELETE /api/vets/{id}.<br>2. Verificar a resposta.<br>3. Conferir no banco o vet, a ligação e a especialidade. |
 | **Resultado esperado** | Passo 2: status 204.<br>Passo 3: o vet e as ligações dele saem; a especialidade continua no banco, sem ligação órfã. |

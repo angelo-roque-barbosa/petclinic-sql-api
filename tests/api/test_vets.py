@@ -380,3 +380,48 @@ def test_apagar_veterinario_sem_especialidade_remove_so_ele(api, db, prepared_ve
     assert control == expected_control, f"o veterinário de controle {control_vet} deveria continuar {expected_control}, é {control}"
     links_after = db.execute(COUNT_VET_SPECIALTIES).fetchone()[0]
     assert links_after == links_before, f"o total de ligações deveria continuar {links_before}, ficou {links_after}"
+
+
+@pytest.fixture
+def vet_and_control_with_specialty(db, vet_with_specialty, control_vet):
+    """Parte do veterinário ligado a uma especialidade da fixture vet_with_specialty e liga por SQL o
+    veterinário de controle (control_vet) à mesma especialidade. Entrega os ids. As ligações são apagadas pelas
+    fixtures dos veterinários, que saem antes da especialidade."""
+    db.execute(INSERT_VET_SPECIALTY, (control_vet, vet_with_specialty["specialty_id"]))
+    yield {**vet_with_specialty, "control_vet_id": control_vet}
+
+
+def test_apagar_veterinario_com_especialidade_leva_as_ligacoes_dele_e_mantem_a_especialidade(
+    api, db, vet_and_control_with_specialty
+):
+    """CT-API-VETS-10: apagar um veterinário com especialidade responde 204 e remove o veterinário e as
+    ligações dele, sem deixar ligação órfã. A especialidade continua, e o veterinário de controle, ligado à
+    mesma especialidade, continua com ela.
+
+    Regra adotada: a ligação pertence ao veterinário; a especialidade é catálogo (apagá-la em uso é recusado,
+    BUG-16)."""
+    # Preparar: o cenário vem da fixture; aqui só o total de ligações antes
+    scenario = vet_and_control_with_specialty
+    vet_id = scenario["vet_id"]
+    specialty_id = scenario["specialty_id"]
+    links_before = db.execute(COUNT_VET_SPECIALTIES).fetchone()[0]
+
+    # Agir
+    response = api.delete(f"/vets/{vet_id}")
+
+    # Verificar a resposta
+    assert response.status_code == 204, f"DELETE /vets/{vet_id} deveria responder 204, respondeu {response.status_code}"
+
+    # Verificar o banco: o veterinário não existe mais e não sobrou ligação dele (nada órfão)
+    assert db.execute(SELECT_VET_BY_ID, (vet_id,)).fetchone() is None, f"o veterinário {vet_id} não deveria mais existir"
+    orphan_links = db.execute(SELECT_SPECIALTY_IDS_BY_VET, (vet_id,)).fetchall()
+    assert orphan_links == [], f"não deveria sobrar ligação do veterinário {vet_id}, sobraram {orphan_links}"
+
+    # saiu exatamente a ligação dele, e o controle continua ligado à especialidade; pela chave estrangeira de
+    # `vet_specialties`, isso também prova que a especialidade continua no banco
+    links_after = db.execute(COUNT_VET_SPECIALTIES).fetchone()[0]
+    assert links_after == links_before - 1, f"o total de ligações deveria cair para {links_before - 1}, ficou {links_after}"
+    control_links = db.execute(SELECT_SPECIALTY_IDS_BY_VET, (scenario["control_vet_id"],)).fetchall()
+    assert control_links == [(specialty_id,)], (
+        f"o veterinário de controle {scenario['control_vet_id']} deveria continuar ligado a {specialty_id}, tem {control_links}"
+    )
