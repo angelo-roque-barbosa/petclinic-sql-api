@@ -1077,7 +1077,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Objetivo** | Garantir que um id que não existe responde 404. |
 | **Dados de teste** | Id inexistente: maior id de `vets` + 1, lido do banco na hora. |
 | **Passos** | 1. Enviar GET /api/vets/{id inexistente}.<br>2. Verificar a resposta. |
-| **Resultado esperado** | Status 404. |
+| **Resultado esperado** | Status 404. No pytest, também confere que o banco não mudou: o total de veterinários é o mesmo e o id continua sem linha. |
 | **Status** | Não executado |
 | **Observações** | Em 2026-11-23, o maior id + 1 respondeu 404 com o corpo vazio; o id `0` também respondeu 404. Na coleção do Postman: `CT-API-VETS-11`. Id negativo responde 500 (BUG-09), e id não numérico também (mesma causa do BUG-01). |
 

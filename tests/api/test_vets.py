@@ -425,3 +425,31 @@ def test_apagar_veterinario_com_especialidade_leva_as_ligacoes_dele_e_mantem_a_e
     assert control_links == [(specialty_id,)], (
         f"o veterinário de controle {scenario['control_vet_id']} deveria continuar ligado a {specialty_id}, tem {control_links}"
     )
+
+
+# Pergunta: qual é o maior id da tabela `vets` hoje?
+# Devolve uma linha só, com um único valor: o maior id.
+SELECT_MAX_VET_ID = """
+SELECT MAX(id) FROM vets;
+"""
+
+
+def test_consultar_veterinario_inexistente_responde_404(api, db):
+    """CT-API-VETS-11: consultar um veterinário que não existe (maior id de `vets` + 1, lido na hora) responde
+    404, e a consulta não muda o banco: o total de veterinários continua o mesmo e o id continua sem linha."""
+    # Preparar: o id inexistente é o maior id de `vets` + 1, lido do banco na hora
+    missing_vet_id = db.execute(SELECT_MAX_VET_ID).fetchone()[0] + 1
+    vets_before = db.execute(COUNT_VETS).fetchone()[0]
+
+    # Agir
+    response = api.get(f"/vets/{missing_vet_id}")
+
+    # Verificar a resposta
+    assert response.status_code == 404, f"GET /vets/{missing_vet_id} deveria responder 404, respondeu {response.status_code}"
+
+    # Verificar o banco: nada mudou, e o id continua sem veterinário
+    vets_after = db.execute(COUNT_VETS).fetchone()[0]
+    assert vets_after == vets_before, f"o total de veterinários deveria continuar {vets_before}, ficou {vets_after}"
+    assert db.execute(SELECT_VET_BY_ID, (missing_vet_id,)).fetchone() is None, (
+        f"o GET não deveria criar o veterinário {missing_vet_id}"
+    )
