@@ -162,6 +162,7 @@ PREPARED_OWNER = {
 PREPARED_PET = {"name": "Thor", "birth_date": date(2020, 5, 10)}
 PREPARED_VISIT = {"visit_date": date(2026, 11, 1), "description": "Consulta de rotina"}
 SECOND_VISIT = {"visit_date": date(2026, 11, 2), "description": "Retorno"}
+PREPARED_VET = {"first_name": "Helena", "last_name": "Costa"}
 
 # Pergunta: como gravar um tipo de pet novo e receber o id que o banco gerou para ele?
 # Recebe o nome como parâmetro (%s) e devolve uma linha com um valor só: o id criado.
@@ -215,6 +216,14 @@ RETURNING id;
 # Pergunta: como apagar a especialidade com um id? Recebe o id (%s).
 DELETE_SPECIALTY = """
 DELETE FROM specialties WHERE id = %s;
+"""
+
+# Pergunta: como gravar um veterinário novo e receber o id que o banco gerou para ele?
+# Recebe, nesta ordem, first_name e last_name (dois %s) e devolve uma linha com um valor só: o id criado.
+INSERT_VET = """
+INSERT INTO vets (first_name, last_name)
+VALUES (%s, %s)
+RETURNING id;
 """
 
 # Pergunta: como apagar todas as ligações de um veterinário com especialidades? Recebe o id do veterinário (%s)
@@ -322,6 +331,17 @@ def specialties_to_delete(db):
     yield ids
     for specialty_id in ids:
         db.execute(DELETE_SPECIALTY, (specialty_id,))
+
+
+@pytest.fixture
+def prepared_vet(db):
+    """Grava direto no banco um veterinário, sem especialidades, com os dados de PREPARED_VET, e entrega o id.
+    No fim, apaga as ligações dele em `vet_specialties` (um teste pode ter acrescentado) e depois o
+    veterinário; apagar zero linhas também serve, porque ele pode já ter sido removido."""
+    vet_id = db.execute(INSERT_VET, (PREPARED_VET["first_name"], PREPARED_VET["last_name"])).fetchone()[0]
+    yield vet_id
+    db.execute(DELETE_VET_SPECIALTIES_BY_VET, (vet_id,))
+    db.execute(DELETE_VET, (vet_id,))
 
 
 @pytest.fixture
