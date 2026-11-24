@@ -1,5 +1,7 @@
 """Testes de veterinários (tabelas `vets` e `vet_specialties`), com o banco como oráculo."""
 
+import pytest
+
 from conftest import PREPARED_SPECIALTY_NAME, SECOND_SPECIALTY_NAME
 
 # Veterinário padrão do docs/casos-de-teste.md: nome e sobrenome só com letras. As especialidades são as das
@@ -54,3 +56,52 @@ def test_criar_veterinario_com_especialidades_grava_o_nome_e_as_ligacoes(
     links = db.execute(SELECT_SPECIALTY_IDS_BY_VET, (body["id"],)).fetchall()
     expected_links = [(specialty_id,) for specialty_id in sorted((prepared_specialty, second_specialty))]
     assert links == expected_links, f"o veterinário {body['id']} deveria ter as ligações {expected_links}, tem {links}"
+
+
+# Pergunta: quantos veterinários existem hoje?
+# Devolve uma linha só, com um único valor: o total de linhas de `vets`.
+COUNT_VETS = """
+SELECT COUNT(*) FROM vets;
+"""
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        pytest.param("firstName", None, id="sem-firstName"),
+        pytest.param("lastName", None, id="sem-lastName"),
+        pytest.param("firstName", "", id="firstName-vazio"),
+        pytest.param("lastName", "", id="lastName-vazio"),
+    ],
+)
+def test_criar_veterinario_sem_nome_ou_sobrenome_e_recusado_sem_gravar(api, db, vets_to_delete, field, value):
+    """CT-API-VETS-02: criar um veterinário sem nome ou sem sobrenome (campo ausente ou vazio) responde 400
+    apontando só o campo da variação e não grava veterinário nenhum.
+
+    O banco aceitaria nome e sobrenome NULL: quem recusa é a validação da API. O corpo leva `specialties`
+    vazia, porque a lista é obrigatória e, sem ela, o erro apontaria outro campo."""
+    # Preparar: o veterinário padrão sem especialidades, com o campo da vez ausente (value None) ou vazio
+    payload = {**VET, "specialties": []}
+    if value is None:
+        del payload[field]
+    else:
+        payload[field] = value
+    vets_before = db.execute(COUNT_VETS).fetchone()[0]
+
+    # Agir
+    response = api.post("/vets", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        vets_to_delete.append(body["id"])
+
+    # Verificar a resposta: 400, e o erro aponta só o campo da variação
+    assert response.status_code == 400, f"POST /vets com {payload} deveria responder 400, respondeu {response.status_code}"
+    errors = body.get("schemaValidationErrors") or []
+    assert errors, "a resposta deveria listar os erros de validação"
+    assert {error["field"] for error in errors} == {field}, (
+        f"o erro deveria apontar só {field}, apontou {sorted({error['field'] for error in errors})}"
+    )
+
+    # Verificar o banco: o total de veterinários não muda
+    vets_after = db.execute(COUNT_VETS).fetchone()[0]
+    assert vets_after == vets_before, f"o total de veterinários deveria continuar {vets_before}, ficou {vets_after}"

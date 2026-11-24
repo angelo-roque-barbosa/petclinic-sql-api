@@ -943,7 +943,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – negativo (validação) |
 | **Prioridade** | Média |
 | **Objetivo** | Garantir que a API recusa veterinário sem nome ou sobrenome. |
-| **Dados de teste** | Vet padrão sem especialidades, omitindo um campo por vez (firstName, lastName) e com cada um como `''`. |
+| **Dados de teste** | Vet padrão sem especialidades, omitindo um campo por vez (firstName, lastName) e com cada um como `''` (no pytest, um `parametrize` com as quatro variações). |
 | **Passos** | 1. Contar as linhas de `vets`.<br>2. Para cada variação, enviar POST /api/vets.<br>3. Verificar cada resposta e contar de novo. |
 | **Resultado esperado** | Status 400 em todos e mesma contagem. |
 | **Status** | Não executado |
