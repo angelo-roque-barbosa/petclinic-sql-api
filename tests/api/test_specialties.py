@@ -78,3 +78,61 @@ def test_criar_especialidade_sem_nome_e_recusada_sem_gravar(api, db, specialties
     assert specialties_after == specialties_before, (
         f"o total de especialidades deveria continuar {specialties_before}, ficou {specialties_after}"
     )
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        pytest.param("a" * 80, id="80-letras"),
+        pytest.param(("ortopedia & clínica/cirúrgica " * 3)[:80], id="80-com-e-comercial-barra-e-acentos"),
+    ],
+)
+def test_criar_especialidade_com_nome_de_80_caracteres_grava_inteiro(api, db, specialties_to_delete, name):
+    """CT-API-SPECIALTIES-03: um nome de especialidade com 80 caracteres, o limite do contrato, é aceito e
+    gravado inteiro, também com `&`, `/` e letras acentuadas (que ocupam mais de 80 bytes)."""
+    # Preparar
+    assert len(name) == 80, f"o nome do teste deveria ter 80 caracteres, tem {len(name)}"
+    payload = {"name": name}
+
+    # Agir
+    response = api.post("/specialties", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        specialties_to_delete.append(body["id"])
+
+    # Verificar a resposta
+    assert response.status_code == 201, f"POST /specialties com nome de 80 caracteres deveria responder 201, respondeu {response.status_code}"
+
+    # Verificar o banco: o nome gravado é o enviado, sem corte
+    row = db.execute(SELECT_SPECIALTY_BY_ID, (body["id"],)).fetchone()
+    expected = (payload["name"],)
+    assert row == expected, f"a especialidade {body['id']} deveria ter o nome enviado, de 80 caracteres; tem {row}"
+
+
+def test_criar_especialidade_com_nome_de_81_caracteres_e_recusada_sem_gravar(api, db, specialties_to_delete):
+    """CT-API-SPECIALTIES-03: um nome de especialidade com 81 caracteres, um acima do limite do contrato,
+    responde 400 apontando o campo `name` e não grava especialidade nenhuma."""
+    # Preparar
+    payload = {"name": "a" * 81}
+    assert len(payload["name"]) == 81, "o nome do teste deveria ter 81 caracteres"
+    specialties_before = db.execute(COUNT_SPECIALTIES).fetchone()[0]
+
+    # Agir
+    response = api.post("/specialties", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        specialties_to_delete.append(body["id"])
+
+    # Verificar a resposta: 400, e o erro aponta só o campo name
+    assert response.status_code == 400, f"POST /specialties com nome de 81 caracteres deveria responder 400, respondeu {response.status_code}"
+    errors = body.get("schemaValidationErrors") or []
+    assert errors, "a resposta deveria listar os erros de validação"
+    assert {error["field"] for error in errors} == {"name"}, (
+        f"o erro deveria apontar só name, apontou {sorted({error['field'] for error in errors})}"
+    )
+
+    # Verificar o banco: o total de especialidades não muda
+    specialties_after = db.execute(COUNT_SPECIALTIES).fetchone()[0]
+    assert specialties_after == specialties_before, (
+        f"o total de especialidades deveria continuar {specialties_before}, ficou {specialties_after}"
+    )
