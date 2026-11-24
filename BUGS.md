@@ -6,7 +6,7 @@ detalhes de cada um: passos, esperado, obtido, evidência no banco e, quando con
 Ambiente: `springcommunity/spring-petclinic-rest:latest` (4.0.2) com `postgres:16.3`, via `docker compose`. Todos
 reproduzidos do zero (`docker compose down -v` e `up -d --wait`). BUG-01, BUG-02 e BUG-03 foram reproduzidos de novo
 em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`); o BUG-04 foi reproduzido nela em
-2026-11-17, o BUG-05, o BUG-06, o BUG-07, o BUG-08 e o BUG-09, em 2026-11-18, o BUG-10, em 2026-11-19, o BUG-11 e o BUG-12, em 2026-11-20, o BUG-13 e o BUG-14, em 2026-11-21, o BUG-15 e o BUG-16, em 2026-11-22, e o BUG-17, em 2026-11-23.
+2026-11-17, o BUG-05, o BUG-06, o BUG-07, o BUG-08 e o BUG-09, em 2026-11-18, o BUG-10, em 2026-11-19, o BUG-11 e o BUG-12, em 2026-11-20, o BUG-13 e o BUG-14, em 2026-11-21, o BUG-15 e o BUG-16, em 2026-11-22, o BUG-17, em 2026-11-23, e o BUG-18, em 2026-11-24.
 
 | Bug | Resumo | Impacto | Issue |
 |:---|:---|:---|:---|
@@ -27,6 +27,7 @@ em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`)
 | [BUG-15](#bug-15--especialidade-com-nome-repetido-é-aceita) | Especialidade com nome repetido é aceita, inclusive com outra caixa, espaço no fim e ao renomear | baixo a médio | [#15](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/15) |
 | [BUG-16](#bug-16--apagar-especialidade-em-uso-responde-404-como-se-ela-não-existisse) | Apagar especialidade em uso responde 404, como se ela não existisse | baixo a médio | [#16](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/16) |
 | [BUG-17](#bug-17--especialidade-do-veterinário-é-resolvida-pelo-nome-o-id-é-ignorado-e-nome-desconhecido-some-em-silêncio) | Especialidade do veterinário é resolvida pelo nome: o `id` é ignorado e nome desconhecido some em silêncio | médio a alto | [#17](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/17) |
+| [BUG-18](#bug-18--senha-do-usuário-criado-pela-api-é-gravada-em-texto-puro) | Senha do usuário criado pela API é gravada em texto puro e devolvida na resposta | alto | — |
 
 ## BUG-01 · API responde 500 em vez de 400 quando o id do dono não é numérico
 
@@ -561,6 +562,35 @@ em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`)
 - **Impacto:** médio a alto. O `PUT` apaga especialidades que já existiam quando recebe uma que não acha, e um `id`
   pode ligar a especialidade errada, sempre com sucesso na resposta. Com o BUG-15, uma especialidade pedida vira duas
   ligadas. Quem integra pelo `id`, como o contrato sugere, grava dados errados sem saber.
+
+## BUG-18 · Senha do usuário criado pela API é gravada em texto puro
+
+- **Issue:** não aberta.
+- **Passos:** `docker compose down -v` → `up -d --wait` → contar as linhas de `users` e `roles` → enviar
+  `POST /api/users` com `{"username": "qaclara", "password": "Segredo123", "enabled": true, "roles": [{"name":
+  "ROLE_OWNER_ADMIN"}]}` → buscar no banco a linha de `users` e as de `roles` desse username → comparar com o `admin`
+  do seed.
+- **Esperado:** a senha gravada em `users.password` como hash (bcrypt, que começa com `$2a$` ou `$2b$` e tem 60
+  caracteres), nunca igual à enviada, como já está a senha do `admin` do seed; a resposta sem a senha.
+- **Obtido:** `201`, e a senha é gravada exatamente como foi enviada. A resposta também devolve a senha em texto puro.
+  O usuário fica ativo e com o papel enviado, como esperado.
+
+  | Usuário | `password` no banco | Tamanho | Formato bcrypt |
+  |:---|:---|:---|:---|
+  | `admin` (seed) | `$2a$10$…` | 60 | sim |
+  | `qaclara` (criado pela API) | `Segredo123` | 10 | não: igual à senha enviada |
+
+- **Evidência no banco:** a linha de `qaclara` em `users`, com `password = 'Segredo123'`, e a linha dele em `roles`
+  com `ROLE_OWNER_ADMIN`. Contagens de `users` e `roles`: 1 e 3 antes, 2 e 4 com o usuário do teste, 1 e 3 depois da
+  limpeza (direto no banco, porque a API não tem DELETE de usuário). Reproduzido do zero em 2026-11-24, na imagem
+  `4.0.2` (digest `sha256:daba846d…`).
+- **Causa provável:** a API grava o usuário sem passar a senha por um codificador de senha. O seed foi carregado já
+  com o hash, por isso só os usuários criados pela API ficam em texto puro. O ambiente usa a configuração de
+  segurança padrão da imagem; não foi conferido se, com a segurança da aplicação ligada, a senha passa a ser
+  codificada.
+- **Impacto:** alto. Qualquer pessoa com leitura do banco (ou de um backup) vê a senha dos usuários criados pela API,
+  e a própria resposta do POST a expõe. Se a autenticação estiver ligada e comparar com bcrypt, esses usuários também
+  não conseguem entrar.
 
 ## Observações
 

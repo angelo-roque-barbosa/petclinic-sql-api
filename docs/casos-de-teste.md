@@ -42,7 +42,8 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | Bugs conhecidos | [tests/api/known_bugs/test_specialty_name.py](#testsapiknown_bugstest_specialty_namepy) | 1 |
 | Bugs conhecidos | [tests/api/known_bugs/test_specialty_delete.py](#testsapiknown_bugstest_specialty_deletepy) | 1 |
 | Bugs conhecidos | [tests/api/known_bugs/test_vet_specialties.py](#testsapiknown_bugstest_vet_specialtiespy) | 1 |
-| **Total** | | **96** |
+| Bugs conhecidos | [tests/api/known_bugs/test_user_password.py](#testsapiknown_bugstest_user_passwordpy) | 1 |
+| **Total** | | **97** |
 
 ## API
 
@@ -1104,7 +1105,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Enviar POST /api/users.<br>2. Verificar a resposta.<br>3. Buscar no banco a linha de `users` e as linhas de `roles` desse username. |
 | **Resultado esperado** | Passo 2: status 2xx de criação.<br>Passo 3: password diferente da senha enviada, no formato bcrypt (começa com `$2a$` ou `$2b$` e tem 60 caracteres); enabled = true; uma linha em `roles` com `ROLE_OWNER_ADMIN`. |
 | **Status** | Não executado |
-| **Observações** | Dicionário: o banco aceita senha em texto puro; o hash é responsabilidade da API. |
+| **Observações** | Dicionário: o banco aceita senha em texto puro; o hash é responsabilidade da API.<br>Em 2026-11-24, a API respondeu 201, gravou o usuário ativo e com o papel, mas guardou a senha em texto puro (igual à enviada) e a devolveu na resposta: é o BUG-18 (CT-BUG-18-01). |
 
 #### CT-API-USERS-02 — Criar usuário sem username ou com username vazio
 
@@ -1578,3 +1579,22 @@ A coleção cobre donos, pets, visitas, tipos de pet, especialidades e veteriná
 | **Resultado obtido** | Passo 3: 201 nos POST e 204 no PUT. Passo 4: veterinários a mais, gravados sem a especialidade ou com a do `name`; o veterinário do PUT perdeu a especialidade que tinha (BUGS.md). |
 | **Status** | Não executado |
 | **Observações** | Reproduzido do zero em 2026-11-23. Um caso parametrizado por pedido (`pytest.mark.parametrize`). As especialidades usadas são criadas pelo teste, com nomes únicos, para o BUG-15 não interferir. Teardown: veterinários, depois as especialidades; cada remoção aceita "já removido". |
+
+### tests/api/known_bugs/test_user_password.py
+
+#### CT-BUG-18-01 — [BUG-18] Senha do usuário é gravada em hash e não volta na resposta
+
+| Campo | Descrição |
+|---|---|
+| **Módulo / Área** | Bugs conhecidos › API › Usuários › Criação |
+| **Tipo de teste** | Funcional – segurança |
+| **Prioridade** | Alta |
+| **Bug relacionado** | BUG-18 |
+| **Objetivo** | Garantir que a senha do usuário criado pela API é gravada como hash bcrypt e não aparece na resposta. |
+| **Pré-condições** | Nenhuma. |
+| **Dados de teste** | Usuário padrão: username que não existe no seed, senha e papel `ROLE_OWNER_ADMIN`. |
+| **Passos** | 1. Enviar POST /api/users.<br>2. Verificar a resposta.<br>3. Buscar no banco a linha de `users` desse username. |
+| **Resultado esperado** | Passo 2: status 201, sem a senha no corpo.<br>Passo 3: password diferente da senha enviada, no formato bcrypt (começa com `$2a$` ou `$2b$` e tem 60 caracteres). |
+| **Resultado obtido** | Passo 2: status 201, com a senha em texto puro no corpo. Passo 3: password igual à senha enviada (BUGS.md). |
+| **Status** | Não executado |
+| **Observações** | Reproduzido do zero em 2026-11-24. O `admin` do seed tem a senha em bcrypt, o que mostra o formato esperado. Teardown direto no banco, porque a API não tem DELETE de usuário: papéis, depois o usuário; cada remoção aceita "já removido". |
