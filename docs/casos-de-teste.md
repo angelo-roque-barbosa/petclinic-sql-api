@@ -1148,7 +1148,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Para cada variação, enviar POST /api/users.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | Status 400 e nenhum usuário novo. |
 | **Status** | Não executado |
-| **Observações** | O contrato não exige password, mas o banco tem NOT NULL. Senha `''` viraria um hash válido de senha vazia.<br>Em 2026-11-24, `''` respondeu 400 apontando `password`, sem gravar nada; sem o campo (e com `null`) a resposta foi 404 com `DataIntegrityViolationException`, também sem gravar: quem recusa é o banco. Isso ampliou o BUG-20 (CT-BUG-20-02). |
+| **Observações** | O contrato não exige password, mas o banco tem NOT NULL. Senha `''` viraria um hash válido de senha vazia.<br>Em 2026-11-24, `''` respondeu 400 apontando `password`, sem gravar nada; sem o campo (e com `null`) a resposta foi 404 com `DataIntegrityViolationException`, também sem gravar: quem recusa é o banco. Isso ampliou o BUG-20 (CT-BUG-20-02). No pytest entra só `''` (`test_criar_usuario_com_senha_vazia_e_recusado_sem_gravar`), para a suíte continuar sem falhas conhecidas. |
 
 #### CT-API-USERS-05 — Criar usuário com username já cadastrado
 

@@ -143,3 +143,34 @@ def test_criar_usuario_com_username_de_81_caracteres_e_recusado_sem_gravar(api, 
     # Verificar o banco: o total de usuários não muda
     users_after = db.execute(COUNT_USERS).fetchone()[0]
     assert users_after == users_before, f"o total de usuários deveria continuar {users_before}, ficou {users_after}"
+
+
+def test_criar_usuario_com_senha_vazia_e_recusado_sem_gravar(api, db, users_to_delete):
+    """CT-API-USERS-04: criar um usuário com senha vazia responde 400 apontando o campo `password` e não grava
+    usuário nenhum. Uma senha vazia viraria um hash válido de senha vazia.
+
+    Sem o campo (ou com null) a resposta deveria ser a mesma, mas hoje é 404, porque quem recusa é o banco: está
+    no BUG-20, coberto pelo CT-BUG-20-02."""
+    # Preparar: o usuário padrão com a senha vazia, registrado para a limpeza caso a API o grave
+    payload = {**USER, "password": ""}
+    users_to_delete.append(payload["username"])
+    users_before = db.execute(COUNT_USERS).fetchone()[0]
+
+    # Agir
+    response = api.post("/users", json=payload)
+    body = response.json()
+
+    # Verificar a resposta: 400, e o erro aponta só o campo password
+    assert response.status_code == 400, f"POST /users com senha vazia deveria responder 400, respondeu {response.status_code}"
+    errors = body.get("schemaValidationErrors") or []
+    assert errors, "a resposta deveria listar os erros de validação"
+    assert {error["field"] for error in errors} == {"password"}, (
+        f"o erro deveria apontar só password, apontou {sorted({error['field'] for error in errors})}"
+    )
+
+    # Verificar o banco: o total de usuários não muda e o username continua sem linha
+    users_after = db.execute(COUNT_USERS).fetchone()[0]
+    assert users_after == users_before, f"o total de usuários deveria continuar {users_before}, ficou {users_after}"
+    assert db.execute(SELECT_USER_BY_USERNAME, (payload["username"],)).fetchone() is None, (
+        f"o usuário {payload['username']!r} não deveria ter sido gravado"
+    )
