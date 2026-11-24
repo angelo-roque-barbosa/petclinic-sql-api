@@ -6,7 +6,7 @@ detalhes de cada um: passos, esperado, obtido, evidência no banco e, quando con
 Ambiente: `springcommunity/spring-petclinic-rest:latest` (4.0.2) com `postgres:16.3`, via `docker compose`. Todos
 reproduzidos do zero (`docker compose down -v` e `up -d --wait`). BUG-01, BUG-02 e BUG-03 foram reproduzidos de novo
 em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`); o BUG-04 foi reproduzido nela em
-2026-11-17, o BUG-05, o BUG-06, o BUG-07, o BUG-08 e o BUG-09, em 2026-11-18, o BUG-10, em 2026-11-19, o BUG-11 e o BUG-12, em 2026-11-20, o BUG-13 e o BUG-14, em 2026-11-21, o BUG-15 e o BUG-16, em 2026-11-22, o BUG-17, em 2026-11-23, e o BUG-18, em 2026-11-24.
+2026-11-17, o BUG-05, o BUG-06, o BUG-07, o BUG-08 e o BUG-09, em 2026-11-18, o BUG-10, em 2026-11-19, o BUG-11 e o BUG-12, em 2026-11-20, o BUG-13 e o BUG-14, em 2026-11-21, o BUG-15 e o BUG-16, em 2026-11-22, o BUG-17, em 2026-11-23, e o BUG-18 e o BUG-19, em 2026-11-24.
 
 | Bug | Resumo | Impacto | Issue |
 |:---|:---|:---|:---|
@@ -28,6 +28,7 @@ em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`)
 | [BUG-16](#bug-16--apagar-especialidade-em-uso-responde-404-como-se-ela-não-existisse) | Apagar especialidade em uso responde 404, como se ela não existisse | baixo a médio | [#16](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/16) |
 | [BUG-17](#bug-17--especialidade-do-veterinário-é-resolvida-pelo-nome-o-id-é-ignorado-e-nome-desconhecido-some-em-silêncio) | Especialidade do veterinário é resolvida pelo nome: o `id` é ignorado e nome desconhecido some em silêncio | médio a alto | [#17](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/17) |
 | [BUG-18](#bug-18--senha-do-usuário-criado-pela-api-é-gravada-em-texto-puro) | Senha do usuário criado pela API é gravada em texto puro e devolvida na resposta | alto | — |
+| [BUG-19](#bug-19--username-só-com-espaços-é-aceito-e-gravado) | Username só com espaços é aceito e gravado, com papel | baixo a médio | — |
 
 ## BUG-01 · API responde 500 em vez de 400 quando o id do dono não é numérico
 
@@ -591,6 +592,27 @@ em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`)
 - **Impacto:** alto. Qualquer pessoa com leitura do banco (ou de um backup) vê a senha dos usuários criados pela API,
   e a própria resposta do POST a expõe. Se a autenticação estiver ligada e comparar com bcrypt, esses usuários também
   não conseguem entrar.
+
+## BUG-19 · Username só com espaços é aceito e gravado
+
+- **Issue:** não aberta.
+- **Passos:** `docker compose down -v` → `up -d --wait` → contar as linhas de `users` e `roles` → enviar
+  `POST /api/users` com `{"username": "   ", "password": "Segredo123", "enabled": true, "roles": [{"name":
+  "ROLE_OWNER_ADMIN"}]}` (três espaços) → buscar no banco os usuários e os papéis cujo username, sem os espaços, fica
+  vazio.
+- **Esperado:** `400` apontando o campo `username`, como já acontece sem o campo e com `''`, e nenhum usuário gravado.
+  Um username em branco não identifica ninguém.
+- **Obtido:** `201`. O usuário é gravado com o username `'   '`, ativo e com o papel `ROLE_OWNER_ADMIN`. Sem o campo
+  e com `''`, a resposta é `400`, como esperado.
+- **Evidência no banco:** uma linha em `users` com `username = '   '` (`length` 3) e `enabled = true`, e uma em
+  `roles` com esse username e `ROLE_OWNER_ADMIN`. Contagens de `users` e `roles`: 1 e 3 antes, 2 e 4 com o usuário do
+  teste, 1 e 3 depois da limpeza (direto no banco, porque a API não tem DELETE de usuário). Reproduzido do zero em
+  2026-11-24, na imagem `4.0.2` (digest `sha256:daba846d…`).
+- **Causa provável:** o contrato exige só `minLength: 1` no `username`, sem `pattern`, então três espaços passam na
+  validação; o banco tem `NOT NULL`, mas aceita texto em branco. É o mesmo padrão do BUG-06 (nome de pet) e do BUG-11
+  (descrição de visita).
+- **Impacto:** baixo a médio. O `username` é a chave primária de `users`: um login em branco ocupa esse valor, não
+  identifica ninguém em logs ou telas e recebe papéis, inclusive de administração.
 
 ## Observações
 

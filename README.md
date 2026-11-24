@@ -185,7 +185,7 @@ execução; quando difere do esperado, a linha aponta o bug.
 
 ## Achados
 
-Dezoito bugs e duas observações, todos reproduzidos do zero e com evidência no banco. Os detalhes (passos,
+Dezenove bugs e duas observações, todos reproduzidos do zero e com evidência no banco. Os detalhes (passos,
 esperado, obtido, evidência e causa) estão em [BUGS.md](BUGS.md).
 
 | Bug | Resumo | Impacto | Issue |
@@ -208,6 +208,7 @@ esperado, obtido, evidência e causa) estão em [BUGS.md](BUGS.md).
 | BUG-16 | `DELETE` de especialidade em uso responde 404, como se ela não existisse; nada é apagado, porque o banco recusa | baixo a médio | [#16](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/16) |
 | BUG-17 | `POST` e `PUT` de veterinário resolvem a especialidade pelo nome: o `id` é ignorado, nome desconhecido some com 201/204 e o `PUT` apaga as que existiam | médio a alto | [#17](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/17) |
 | BUG-18 | `POST /api/users` grava a senha em texto puro, ao contrário do `admin` do seed (bcrypt), e a devolve na resposta | alto | — |
+| BUG-19 | `POST /api/users` aceita e grava username só com espaços, com papel | baixo a médio | — |
 
 **OBS-01:** o contrato documenta 200 como sucesso em sete endpoints, mas a API devolve 201 ou 204 (o correto). Não
 é bug; fica para a validação de contrato da fase 5.

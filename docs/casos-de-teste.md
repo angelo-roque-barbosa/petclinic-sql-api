@@ -43,7 +43,8 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | Bugs conhecidos | [tests/api/known_bugs/test_specialty_delete.py](#testsapiknown_bugstest_specialty_deletepy) | 1 |
 | Bugs conhecidos | [tests/api/known_bugs/test_vet_specialties.py](#testsapiknown_bugstest_vet_specialtiespy) | 1 |
 | Bugs conhecidos | [tests/api/known_bugs/test_user_password.py](#testsapiknown_bugstest_user_passwordpy) | 1 |
-| **Total** | | **97** |
+| Bugs conhecidos | [tests/api/known_bugs/test_user_username.py](#testsapiknown_bugstest_user_usernamepy) | 1 |
+| **Total** | | **98** |
 
 ## API
 
@@ -1119,7 +1120,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Contar as linhas de `users`.<br>2. Para cada variação, enviar POST /api/users.<br>3. Verificar cada resposta e contar de novo. |
 | **Resultado esperado** | Status 400 em todos e mesma contagem. |
 | **Status** | Não executado |
-| **Observações** | Dicionário: o banco aceita username `''`. |
+| **Observações** | Dicionário: o banco aceita username `''`.<br>Em 2026-11-24, sem o campo e com `''` a resposta foi 400 apontando `username`, sem gravar nada; `'   '` foi aceito com 201 e gravado com o papel: é o BUG-19 (CT-BUG-19-01). |
 
 #### CT-API-USERS-03 — Username no limite de 20 caracteres
 
@@ -1598,3 +1599,22 @@ A coleção cobre donos, pets, visitas, tipos de pet, especialidades e veteriná
 | **Resultado obtido** | Passo 2: status 201, com a senha em texto puro no corpo. Passo 3: password igual à senha enviada (BUGS.md). |
 | **Status** | Não executado |
 | **Observações** | Reproduzido do zero em 2026-11-24. O `admin` do seed tem a senha em bcrypt, o que mostra o formato esperado. Teardown direto no banco, porque a API não tem DELETE de usuário: papéis, depois o usuário; cada remoção aceita "já removido". |
+
+### tests/api/known_bugs/test_user_username.py
+
+#### CT-BUG-19-01 — [BUG-19] Username só com espaços é recusado
+
+| Campo | Descrição |
+|---|---|
+| **Módulo / Área** | Bugs conhecidos › API › Usuários › Criação |
+| **Tipo de teste** | Funcional – negativo (validação) |
+| **Prioridade** | Média |
+| **Bug relacionado** | BUG-19 |
+| **Objetivo** | Garantir que a API recusa username só com espaços, como já recusa username ausente ou vazio. |
+| **Pré-condições** | Nenhuma. |
+| **Dados de teste** | Usuário padrão com username `'   '` (três espaços). |
+| **Passos** | 1. Contar as linhas de `users`.<br>2. Enviar POST /api/users.<br>3. Verificar a resposta.<br>4. Contar de novo e buscar o username em branco. |
+| **Resultado esperado** | Passo 3: status 400 apontando `username`.<br>Passo 4: mesma contagem e nenhuma linha com esse username. |
+| **Resultado obtido** | Passo 3: status 201. Passo 4: um usuário a mais, com username `'   '`, ativo e com o papel enviado (BUGS.md). |
+| **Status** | Não executado |
+| **Observações** | Reproduzido do zero em 2026-11-24. Teardown direto no banco, porque a API não tem DELETE de usuário: papéis, depois o usuário; cada remoção aceita "já removido". |
