@@ -297,3 +297,44 @@ def test_trocar_especialidades_do_veterinario_grava_exatamente_a_nova_lista(api,
     )
     links_after = db.execute(COUNT_VET_SPECIALTIES).fetchone()[0]
     assert links_after == links_before, f"o total de ligações deveria continuar {links_before}, ficou {links_after}"
+
+
+@pytest.fixture
+def vet_with_specialty(db, prepared_specialty, prepared_vet):
+    """Liga por SQL o veterinário da fixture prepared_vet à especialidade da prepared_specialty e entrega os
+    dois ids. No fim, apaga as ligações do veterinário (zero também serve); o veterinário sai antes da
+    especialidade, porque as fixtures são desmontadas na ordem inversa em que foram pedidas."""
+    db.execute(INSERT_VET_SPECIALTY, (prepared_vet, prepared_specialty))
+    yield {"vet_id": prepared_vet, "specialty_id": prepared_specialty}
+    db.execute(DELETE_VET_SPECIALTIES_BY_VET, (prepared_vet,))
+
+
+# Nome novo do CT-API-VETS-08: não existe no seed nem nas fixtures.
+UPDATED_VET = {"firstName": "Beatriz", "lastName": "Rocha"}
+
+
+def test_atualizar_nome_do_veterinario_grava_na_mesma_linha_e_mantem_a_ligacao(api, db, vet_with_specialty):
+    """CT-API-VETS-08: o PUT de um veterinário com nome e sobrenome novos e a mesma especialidade responde 204,
+    grava o nome novo na mesma linha, sem criar outro veterinário, e mantém a ligação com a especialidade.
+
+    A lista precisa ir com a especialidade: o PUT troca a lista inteira (CT-API-VETS-07)."""
+    # Preparar: o veterinário e a ligação vêm da fixture; aqui só o total antes
+    vet_id = vet_with_specialty["vet_id"]
+    specialty_id = vet_with_specialty["specialty_id"]
+    payload = {**UPDATED_VET, "specialties": [{"id": specialty_id, "name": PREPARED_SPECIALTY_NAME}]}
+    vets_before = db.execute(COUNT_VETS).fetchone()[0]
+
+    # Agir
+    response = api.put(f"/vets/{vet_id}", json=payload)
+
+    # Verificar a resposta
+    assert response.status_code == 204, f"PUT /vets/{vet_id} deveria responder 204, respondeu {response.status_code}"
+
+    # Verificar o banco: a mesma linha com o nome novo, nenhum veterinário a mais e a ligação mantida
+    row = db.execute(SELECT_VET_BY_ID, (vet_id,)).fetchone()
+    expected = (payload["firstName"], payload["lastName"])
+    assert row == expected, f"o veterinário {vet_id} deveria ser {expected}, é {row}"
+    vets_after = db.execute(COUNT_VETS).fetchone()[0]
+    assert vets_after == vets_before, f"o total de veterinários deveria continuar {vets_before}, ficou {vets_after}"
+    links = db.execute(SELECT_SPECIALTY_IDS_BY_VET, (vet_id,)).fetchall()
+    assert links == [(specialty_id,)], f"o veterinário {vet_id} deveria continuar ligado só a {specialty_id}, tem {links}"

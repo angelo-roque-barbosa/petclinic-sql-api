@@ -1030,8 +1030,8 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – efeito no servidor |
 | **Prioridade** | Baixa |
 | **Objetivo** | Garantir que a atualização grava o novo nome na mesma linha e mantém as especialidades enviadas. |
-| **Pré-condições** | Especialidade e vet com ela, criados via API. |
-| **Dados de teste** | Novo nome e sobrenome, mesma especialidade. |
+| **Pré-condições** | Especialidade e vet com ela, gravados por SQL: as fixtures `prepared_specialty` e `prepared_vet` (tests/conftest.py) e a fixture local `vet_with_specialty` (tests/api/test_vets.py), que grava a ligação. |
+| **Dados de teste** | Novo nome e sobrenome (`Beatriz Rocha` no pytest), mesma especialidade. |
 | **Passos** | 1. Enviar PUT /api/vets/{id}.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | Status 2xx; a linha com o mesmo id tem o novo nome; a ligação continua. |
 | **Status** | Não executado |
