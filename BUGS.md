@@ -27,8 +27,8 @@ em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`)
 | [BUG-15](#bug-15--especialidade-com-nome-repetido-é-aceita) | Especialidade com nome repetido é aceita, inclusive com outra caixa, espaço no fim e ao renomear | baixo a médio | [#15](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/15) |
 | [BUG-16](#bug-16--apagar-especialidade-em-uso-responde-404-como-se-ela-não-existisse) | Apagar especialidade em uso responde 404, como se ela não existisse | baixo a médio | [#16](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/16) |
 | [BUG-17](#bug-17--especialidade-do-veterinário-é-resolvida-pelo-nome-o-id-é-ignorado-e-nome-desconhecido-some-em-silêncio) | Especialidade do veterinário é resolvida pelo nome: o `id` é ignorado e nome desconhecido some em silêncio | médio a alto | [#17](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/17) |
-| [BUG-18](#bug-18--senha-do-usuário-criado-pela-api-é-gravada-em-texto-puro) | Senha do usuário criado pela API é gravada em texto puro e devolvida na resposta | alto | — |
-| [BUG-19](#bug-19--username-só-com-espaços-é-aceito-e-gravado) | Username só com espaços é aceito e gravado, com papel | baixo a médio | — |
+| [BUG-18](#bug-18--senha-do-usuário-criado-pela-api-é-gravada-em-texto-puro) | Senha do usuário criado pela API é gravada em texto puro e devolvida na resposta | alto | [#18](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/18) |
+| [BUG-19](#bug-19--username-só-com-espaços-é-aceito-e-gravado) | Username só com espaços é aceito e gravado, com papel | baixo a médio | [#19](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/19) |
 
 ## BUG-01 · API responde 500 em vez de 400 quando o id do dono não é numérico
 
@@ -566,7 +566,7 @@ em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`)
 
 ## BUG-18 · Senha do usuário criado pela API é gravada em texto puro
 
-- **Issue:** não aberta.
+- **Issue:** [#18](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/18)
 - **Passos:** `docker compose down -v` → `up -d --wait` → contar as linhas de `users` e `roles` → enviar
   `POST /api/users` com `{"username": "qaclara", "password": "Segredo123", "enabled": true, "roles": [{"name":
   "ROLE_OWNER_ADMIN"}]}` → buscar no banco a linha de `users` e as de `roles` desse username → comparar com o `admin`
@@ -595,7 +595,7 @@ em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`)
 
 ## BUG-19 · Username só com espaços é aceito e gravado
 
-- **Issue:** não aberta.
+- **Issue:** [#19](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/19)
 - **Passos:** `docker compose down -v` → `up -d --wait` → contar as linhas de `users` e `roles` → enviar
   `POST /api/users` com `{"username": "   ", "password": "Segredo123", "enabled": true, "roles": [{"name":
   "ROLE_OWNER_ADMIN"}]}` (três espaços) → buscar no banco os usuários e os papéis cujo username, sem os espaços, fica
