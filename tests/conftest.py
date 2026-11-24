@@ -251,6 +251,17 @@ DELETE_VET = """
 DELETE FROM vets WHERE id = %s;
 """
 
+# Pergunta: como apagar todos os papéis de um usuário? Recebe o username (%s) e apaga as linhas de `roles` dele,
+# quantas forem (zero também serve).
+DELETE_ROLES_BY_USERNAME = """
+DELETE FROM roles WHERE username = %s;
+"""
+
+# Pergunta: como apagar o usuário com um username? Recebe o username (%s).
+DELETE_USER = """
+DELETE FROM users WHERE username = %s;
+"""
+
 # Pergunta: como gravar uma visita nova de um pet e receber o id gerado?
 # Recebe, nesta ordem, pet_id, visit_date e description (três %s)
 # e devolve uma linha com um valor só: o id criado.
@@ -381,6 +392,18 @@ def vets_to_delete(db):
     for vet_id in ids:
         db.execute(DELETE_VET_SPECIALTIES_BY_VET, (vet_id,))
         db.execute(DELETE_VET, (vet_id,))
+
+
+@pytest.fixture
+def users_to_delete(db):
+    """Lista de usernames de usuários que o teste vai criar pela API. A API não tem DELETE de usuário, então, no
+    fim, cada um é apagado por SQL: primeiro os papéis em `roles`, depois a linha em `users`, nessa ordem por
+    causa da chave estrangeira. Apagar zero linhas também serve, porque o usuário pode nem ter sido criado."""
+    usernames = []
+    yield usernames
+    for username in usernames:
+        db.execute(DELETE_ROLES_BY_USERNAME, (username,))
+        db.execute(DELETE_USER, (username,))
 
 
 @pytest.fixture
