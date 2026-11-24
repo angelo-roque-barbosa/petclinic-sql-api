@@ -352,3 +352,31 @@ def test_atualizar_nome_do_veterinario_grava_na_mesma_linha_e_mantem_a_ligacao(a
     assert vets_after == vets_before, f"o total de veterinários deveria continuar {vets_before}, ficou {vets_after}"
     links = db.execute(SELECT_SPECIALTY_IDS_BY_VET, (vet_id,)).fetchall()
     assert links == [(specialty_id,)], f"o veterinário {vet_id} deveria continuar ligado só a {specialty_id}, tem {links}"
+
+
+def test_apagar_veterinario_sem_especialidade_remove_so_ele(api, db, prepared_vet, control_vet):
+    """CT-API-VETS-09: apagar um veterinário sem especialidades responde 204 e remove só esse veterinário. O
+    veterinário da fixture control_vet é o controle, e o total de ligações veterinário-especialidade também é
+    conferido."""
+    # Preparar: os dois veterinários, sem especialidades, vêm das fixtures; aqui só os totais antes
+    vet_id = prepared_vet
+    vets_before = db.execute(COUNT_VETS).fetchone()[0]
+    links_before = db.execute(COUNT_VET_SPECIALTIES).fetchone()[0]
+
+    # Agir
+    response = api.delete(f"/vets/{vet_id}")
+
+    # Verificar a resposta
+    assert response.status_code == 204, f"DELETE /vets/{vet_id} deveria responder 204, respondeu {response.status_code}"
+
+    # Verificar o banco: o veterinário não existe mais e saiu exatamente um
+    assert db.execute(SELECT_VET_BY_ID, (vet_id,)).fetchone() is None, f"o veterinário {vet_id} não deveria mais existir"
+    vets_after = db.execute(COUNT_VETS).fetchone()[0]
+    assert vets_after == vets_before - 1, f"o total de veterinários deveria cair para {vets_before - 1}, ficou {vets_after}"
+
+    # o controle continua igual e nenhuma ligação mudou
+    control = db.execute(SELECT_VET_BY_ID, (control_vet,)).fetchone()
+    expected_control = (CONTROL_VET["first_name"], CONTROL_VET["last_name"])
+    assert control == expected_control, f"o veterinário de controle {control_vet} deveria continuar {expected_control}, é {control}"
+    links_after = db.execute(COUNT_VET_SPECIALTIES).fetchone()[0]
+    assert links_after == links_before, f"o total de ligações deveria continuar {links_before}, ficou {links_after}"

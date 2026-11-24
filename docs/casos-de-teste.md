@@ -1045,7 +1045,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – efeito no servidor |
 | **Prioridade** | Média |
 | **Objetivo** | Garantir que a exclusão remove o veterinário. |
-| **Pré-condições** | Vet sem especialidades criado via API. |
+| **Pré-condições** | Dois vets sem especialidades gravados por SQL: a fixture `prepared_vet` (tests/conftest.py) e a fixture local `control_vet` (tests/api/test_vets.py). O segundo é o controle e não pode mudar. |
 | **Dados de teste** | Id do vet. |
 | **Passos** | 1. Enviar DELETE /api/vets/{id}.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | Status 2xx e nenhuma linha de `vets` com esse id. |
