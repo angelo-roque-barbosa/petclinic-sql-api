@@ -928,7 +928,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – positivo |
 | **Prioridade** | Alta |
 | **Objetivo** | Garantir que o veterinário e as ligações com as especialidades são gravados. |
-| **Pré-condições** | Duas especialidades criadas via API. |
+| **Pré-condições** | Duas especialidades gravadas por SQL nas fixtures `prepared_specialty` e `second_specialty` (tests/conftest.py). No pytest, o veterinário criado é apagado pela fixture `vets_to_delete`, antes das especialidades. |
 | **Dados de teste** | Vet padrão: firstName, lastName e as duas especialidades. |
 | **Passos** | 1. Enviar POST /api/vets.<br>2. Verificar a resposta.<br>3. Buscar no banco a linha de `vets` e as linhas de `vet_specialties` com o id devolvido. |
 | **Resultado esperado** | Passo 2: status 2xx de criação.<br>Passo 3: first_name e last_name iguais aos enviados; exatamente duas ligações, com os ids das duas especialidades. |
