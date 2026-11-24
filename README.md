@@ -170,6 +170,9 @@ execução; quando difere do esperado, a linha aponta o bug.
 | `name` (POST de tipo de pet) | só espaços (o banco aceita) | `'   '` | 400, nada gravado | 400, nada gravado |
 | `name` (POST de tipo de pet) | no limite (no banco, `text` sem limite) | 80 caracteres, também acentuados (160 bytes) | 201, gravado inteiro | 201, gravado inteiro |
 | `name` (POST de tipo de pet) | acima do limite | 81 caracteres | 400, nada gravado | 400, nada gravado |
+| `name` (POST de especialidade) | ausente ou nulo (o banco aceita NULL) | sem o campo, `null` | 400, nada gravado | 400, nada gravado |
+| `name` (POST de especialidade) | vazio (o banco aceita) | `''` | 400, nada gravado | 400, nada gravado |
+| `name` (POST de especialidade) | só espaços (o banco aceita) | `'   '` | 400, nada gravado | 400, nada gravado |
 
 ## Achados
 
