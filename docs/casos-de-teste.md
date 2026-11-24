@@ -788,11 +788,11 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – positivo |
 | **Prioridade** | Média |
 | **Objetivo** | Garantir que a especialidade é gravada com o nome enviado. |
-| **Dados de teste** | name com sufixo único. |
+| **Dados de teste** | name de uma especialidade que não existe no banco: `cardiologia` no Postman e `dermatologia` no pytest. A especialidade criada é apagada no fim (fixture `specialties_to_delete` no pytest). |
 | **Passos** | 1. Enviar POST /api/specialties.<br>2. Verificar a resposta.<br>3. Buscar no banco a linha de `specialties` com o id devolvido. |
 | **Resultado esperado** | Passo 2: status 2xx de criação.<br>Passo 3: name igual ao enviado. |
 | **Status** | Não executado |
-| **Observações** | O contrato declara só 200 para o POST; o status exato fica a confirmar na execução.<br>Em 2026-11-22, a API respondeu 201 e gravou o nome enviado. Na coleção do Postman: `CT-API-SPECIALTIES-01`, na pasta nova Specialties. O nome não leva sufixo numérico, porque o `pattern` do contrato só aceita letras, espaço, `-`, `&` e `/`. |
+| **Observações** | O contrato declara só 200 para o POST, mas na execução o status de criação é 201.<br>Em 2026-11-22, a API respondeu 201 e gravou o nome enviado. Na coleção do Postman: `CT-API-SPECIALTIES-01`, na pasta nova Specialties. O nome não leva sufixo numérico, porque o `pattern` do contrato só aceita letras, espaço, `-`, `&` e `/`. |
 
 #### CT-API-SPECIALTIES-02 — Especialidade sem nome, vazia ou só com espaços
 
