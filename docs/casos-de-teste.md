@@ -43,8 +43,8 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | Bugs conhecidos | [tests/api/known_bugs/test_specialty_delete.py](#testsapiknown_bugstest_specialty_deletepy) | 1 |
 | Bugs conhecidos | [tests/api/known_bugs/test_vet_specialties.py](#testsapiknown_bugstest_vet_specialtiespy) | 1 |
 | Bugs conhecidos | [tests/api/known_bugs/test_user_password.py](#testsapiknown_bugstest_user_passwordpy) | 1 |
-| Bugs conhecidos | [tests/api/known_bugs/test_user_username.py](#testsapiknown_bugstest_user_usernamepy) | 1 |
-| **Total** | | **98** |
+| Bugs conhecidos | [tests/api/known_bugs/test_user_username.py](#testsapiknown_bugstest_user_usernamepy) | 2 |
+| **Total** | | **99** |
 
 ## API
 
@@ -1134,7 +1134,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Para cada tamanho, enviar POST /api/users.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | 20: status 2xx e username gravado com 20 caracteres.<br>21: status 400 e nenhum usuário novo. |
 | **Status** | Não executado |
-| **Observações** | O contrato aceita até 80 e o banco recusa acima de 20 (`varchar(20)`): de 21 a 80, o erro tende a chegar ao banco. |
+| **Observações** | O contrato aceita até 80 e o banco recusa acima de 20 (`varchar(20)`): de 21 a 80, o erro tende a chegar ao banco.<br>Em 2026-11-24, 20 caracteres responderam 201 e foram gravados inteiros; 21 e 80 responderam 404 com `DataIntegrityViolationException`, sem gravar nada; 81 respondeu 400 apontando `username`. É o BUG-20 (CT-BUG-20-01). |
 
 #### CT-API-USERS-04 — Criar usuário sem senha
 
@@ -1618,3 +1618,20 @@ A coleção cobre donos, pets, visitas, tipos de pet, especialidades e veteriná
 | **Resultado obtido** | Passo 3: status 201. Passo 4: um usuário a mais, com username `'   '`, ativo e com o papel enviado (BUGS.md). |
 | **Status** | Não executado |
 | **Observações** | Reproduzido do zero em 2026-11-24. Teardown direto no banco, porque a API não tem DELETE de usuário: papéis, depois o usuário; cada remoção aceita "já removido". |
+
+#### CT-BUG-20-01 — [BUG-20] Username acima de 20 caracteres é recusado com 400
+
+| Campo | Descrição |
+|---|---|
+| **Módulo / Área** | Bugs conhecidos › API › Usuários › Criação |
+| **Tipo de teste** | Funcional – validação (valor-limite) |
+| **Prioridade** | Média |
+| **Bug relacionado** | BUG-20 |
+| **Objetivo** | Garantir que um username acima do limite do banco é recusado pela validação da API, com 400, e não pelo banco. |
+| **Pré-condições** | Nenhuma. |
+| **Dados de teste** | Usuário padrão com username de 21 e de 80 caracteres (o limite do contrato). |
+| **Passos** | 1. Contar as linhas de `users`.<br>2. Para cada username, enviar POST /api/users.<br>3. Verificar cada resposta.<br>4. Contar de novo. |
+| **Resultado esperado** | Passo 3: status 400 apontando `username`, sem nome de exceção Java no corpo.<br>Passo 4: mesma contagem. |
+| **Resultado obtido** | Passo 3: status 404 com `DataIntegrityViolationException`. Passo 4: mesma contagem (BUGS.md). |
+| **Status** | Não executado |
+| **Observações** | Reproduzido do zero em 2026-11-24. Um caso parametrizado por tamanho (`pytest.mark.parametrize`). A parte do passo 4 passa hoje; o que falha é o status. Teardown direto no banco, aceitando "já removido". |

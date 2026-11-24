@@ -188,7 +188,7 @@ execução; quando difere do esperado, a linha aponta o bug.
 
 ## Achados
 
-Dezenove bugs e duas observações, todos reproduzidos do zero e com evidência no banco. Os detalhes (passos,
+Vinte bugs e duas observações, todos reproduzidos do zero e com evidência no banco. Os detalhes (passos,
 esperado, obtido, evidência e causa) estão em [BUGS.md](BUGS.md).
 
 | Bug | Resumo | Impacto | Issue |
@@ -212,6 +212,7 @@ esperado, obtido, evidência e causa) estão em [BUGS.md](BUGS.md).
 | BUG-17 | `POST` e `PUT` de veterinário resolvem a especialidade pelo nome: o `id` é ignorado, nome desconhecido some com 201/204 e o `PUT` apaga as que existiam | médio a alto | [#17](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/17) |
 | BUG-18 | `POST /api/users` grava a senha em texto puro, ao contrário do `admin` do seed (bcrypt), e a devolve na resposta | alto | [#18](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/18) |
 | BUG-19 | `POST /api/users` aceita e grava username só com espaços, com papel | baixo a médio | [#19](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/19) |
+| BUG-20 | `POST /api/users` com username de 21 a 80 caracteres responde 404 com `DataIntegrityViolationException`: o contrato aceita 80, o banco só 20 | baixo a médio | [#20](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/20) |
 
 **OBS-01:** o contrato documenta 200 como sucesso em sete endpoints, mas a API devolve 201 ou 204 (o correto). Não
 é bug; fica para a validação de contrato da fase 5.

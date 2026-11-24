@@ -6,7 +6,7 @@ detalhes de cada um: passos, esperado, obtido, evidência no banco e, quando con
 Ambiente: `springcommunity/spring-petclinic-rest:latest` (4.0.2) com `postgres:16.3`, via `docker compose`. Todos
 reproduzidos do zero (`docker compose down -v` e `up -d --wait`). BUG-01, BUG-02 e BUG-03 foram reproduzidos de novo
 em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`); o BUG-04 foi reproduzido nela em
-2026-11-17, o BUG-05, o BUG-06, o BUG-07, o BUG-08 e o BUG-09, em 2026-11-18, o BUG-10, em 2026-11-19, o BUG-11 e o BUG-12, em 2026-11-20, o BUG-13 e o BUG-14, em 2026-11-21, o BUG-15 e o BUG-16, em 2026-11-22, o BUG-17, em 2026-11-23, e o BUG-18 e o BUG-19, em 2026-11-24.
+2026-11-17, o BUG-05, o BUG-06, o BUG-07, o BUG-08 e o BUG-09, em 2026-11-18, o BUG-10, em 2026-11-19, o BUG-11 e o BUG-12, em 2026-11-20, o BUG-13 e o BUG-14, em 2026-11-21, o BUG-15 e o BUG-16, em 2026-11-22, o BUG-17, em 2026-11-23, e o BUG-18, o BUG-19 e o BUG-20, em 2026-11-24.
 
 | Bug | Resumo | Impacto | Issue |
 |:---|:---|:---|:---|
@@ -29,6 +29,7 @@ em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`)
 | [BUG-17](#bug-17--especialidade-do-veterinário-é-resolvida-pelo-nome-o-id-é-ignorado-e-nome-desconhecido-some-em-silêncio) | Especialidade do veterinário é resolvida pelo nome: o `id` é ignorado e nome desconhecido some em silêncio | médio a alto | [#17](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/17) |
 | [BUG-18](#bug-18--senha-do-usuário-criado-pela-api-é-gravada-em-texto-puro) | Senha do usuário criado pela API é gravada em texto puro e devolvida na resposta | alto | [#18](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/18) |
 | [BUG-19](#bug-19--username-só-com-espaços-é-aceito-e-gravado) | Username só com espaços é aceito e gravado, com papel | baixo a médio | [#19](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/19) |
+| [BUG-20](#bug-20--username-de-21-a-80-caracteres-responde-404-em-vez-de-400) | Username de 21 a 80 caracteres responde 404 em vez de 400: o contrato aceita 80, o banco só 20 | baixo a médio | [#20](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/20) |
 
 ## BUG-01 · API responde 500 em vez de 400 quando o id do dono não é numérico
 
@@ -613,6 +614,33 @@ em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`)
   (descrição de visita).
 - **Impacto:** baixo a médio. O `username` é a chave primária de `users`: um login em branco ocupa esse valor, não
   identifica ninguém em logs ou telas e recebe papéis, inclusive de administração.
+
+## BUG-20 · Username de 21 a 80 caracteres responde 404 em vez de 400
+
+- **Issue:** [#20](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/20)
+- **Passos:** `docker compose down -v` → `up -d --wait` → contar as linhas de `users` e `roles` → enviar
+  `POST /api/users` com o usuário padrão (`password`, `enabled`, papel `ROLE_OWNER_ADMIN`) e username com 20, 21, 80
+  e 81 caracteres → conferir a resposta, o banco e o log da API.
+- **Esperado:** `400` apontando o campo `username` para 21 caracteres ou mais, sem gravar nada, e o contrato com o
+  mesmo limite do banco (20).
+- **Obtido:** o contrato aceita até 80 caracteres (`User.username`: `maxLength: 80`), mas a coluna é `varchar(20)`.
+
+  | Username | Resposta | No banco |
+  |:---|:---|:---|
+  | 20 caracteres | `201` | gravado inteiro |
+  | 21 caracteres | `404`, `DataIntegrityViolationException` | nada |
+  | 80 caracteres (limite do contrato) | `404`, `DataIntegrityViolationException` | nada |
+  | 81 caracteres | `400` (`username`) | nada |
+
+- **Evidência no banco:** contagens de `users` e `roles`: 1 e 3 antes; só o usuário de 20 caracteres a mais depois
+  dos quatro pedidos (2 e 4); 1 e 3 depois da limpeza (direto no banco, porque a API não tem DELETE de usuário). O log
+  da API mostra `ERROR: value too long for type character varying(20)` no `insert into users`. Reproduzido do zero
+  em 2026-11-24, na imagem `4.0.2` (digest `sha256:daba846d…`).
+- **Causa provável:** o contrato não acompanha o banco, então de 21 a 80 caracteres a validação deixa passar e quem
+  recusa é o banco; a API responde `404` para qualquer `DataIntegrityViolationException`, a mesma tradução do BUG-03
+  e do BUG-16.
+- **Impacto:** baixo a médio. Nada é gravado errado, mas quem segue o contrato recebe um `404` sem sentido para um
+  nome de 21 a 80 caracteres, com o nome da exceção Java no corpo.
 
 ## Observações
 
