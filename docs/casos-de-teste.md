@@ -737,8 +737,8 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – efeito no servidor |
 | **Prioridade** | Baixa |
 | **Objetivo** | Garantir que a atualização grava o novo nome na mesma linha. |
-| **Pré-condições** | Tipo criado via API. |
-| **Dados de teste** | Novo nome único. |
+| **Pré-condições** | Dois tipos gravados por SQL nas fixtures `prepared_pet_type` e `second_pet_type` (tests/conftest.py). O segundo é o controle e não pode mudar. |
+| **Dados de teste** | Novo nome que não existe no banco (`coelho` no pytest), com o `id` do tipo no corpo. |
 | **Passos** | 1. Enviar PUT /api/pettypes/{id} com o novo nome.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | Status 2xx e a linha com o mesmo id tem o novo nome. |
 | **Status** | Não executado |

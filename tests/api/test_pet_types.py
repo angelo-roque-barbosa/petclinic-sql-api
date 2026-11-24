@@ -2,6 +2,8 @@
 
 import pytest
 
+from conftest import SECOND_PET_TYPE_NAME
+
 # Tipo padrão: o contrato só aceita letras, espaços, hífen e apóstrofo no nome, então não há sufixo numérico.
 # "coelho" não existe no populateDB.sql nem nas fixtures (chinchila e furão), e cada teste apaga o tipo que criou.
 PET_TYPE = {"name": "coelho"}
@@ -132,3 +134,27 @@ def test_criar_tipo_de_pet_com_nome_de_81_caracteres_e_recusado_sem_gravar(api, 
     # Verificar o banco: o total de tipos não muda
     types_after = db.execute(COUNT_PET_TYPES).fetchone()[0]
     assert types_after == types_before, f"o total de tipos deveria continuar {types_before}, ficou {types_after}"
+
+
+def test_atualizar_tipo_de_pet_grava_o_novo_nome_na_mesma_linha(api, db, prepared_pet_type, second_pet_type):
+    """CT-API-PET-TYPES-06: atualizar o nome de um tipo de pet responde 204 e grava o nome novo na mesma linha,
+    sem criar outro tipo. O tipo da fixture second_pet_type é o controle e continua com o nome dele."""
+    # Preparar: o contrato exige o id no corpo, igual ao da URL
+    type_id = prepared_pet_type
+    payload = {"id": type_id, **PET_TYPE}
+    types_before = db.execute(COUNT_PET_TYPES).fetchone()[0]
+
+    # Agir
+    response = api.put(f"/pettypes/{type_id}", json=payload)
+
+    # Verificar a resposta
+    assert response.status_code == 204, f"PUT /pettypes/{type_id} deveria responder 204, respondeu {response.status_code}"
+
+    # Verificar o banco: a mesma linha com o nome novo, nenhum tipo a mais e o controle sem mudança
+    row = db.execute(SELECT_PET_TYPE_BY_ID, (type_id,)).fetchone()
+    expected = (payload["name"],)
+    assert row == expected, f"o tipo {type_id} deveria se chamar {expected}, é {row}"
+    types_after = db.execute(COUNT_PET_TYPES).fetchone()[0]
+    assert types_after == types_before, f"o total de tipos deveria continuar {types_before}, ficou {types_after}"
+    control = db.execute(SELECT_PET_TYPE_BY_ID, (second_pet_type,)).fetchone()
+    assert control == (SECOND_PET_TYPE_NAME,), f"o tipo de controle {second_pet_type} deveria continuar ({SECOND_PET_TYPE_NAME!r},), é {control}"
