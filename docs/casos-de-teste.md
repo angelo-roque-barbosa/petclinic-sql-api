@@ -986,7 +986,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Robustez – entrada inválida |
 | **Prioridade** | Média |
 | **Objetivo** | Garantir que a regra UNIQUE de `vet_specialties` não vira erro 500 nem gravação parcial. |
-| **Pré-condições** | Especialidade criada via API. |
+| **Pré-condições** | Especialidade gravada por SQL na fixture `prepared_specialty` (tests/conftest.py). No pytest, o veterinário criado é apagado pela fixture `vets_to_delete`, antes da especialidade. |
 | **Dados de teste** | Vet padrão com a mesma especialidade duas vezes na lista. |
 | **Passos** | 1. Enviar POST /api/vets.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | Status 201; o veterinário é criado com uma ligação só para a especialidade repetida. |

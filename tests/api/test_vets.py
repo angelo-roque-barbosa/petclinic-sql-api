@@ -198,3 +198,30 @@ def test_criar_veterinario_homonimo_grava_outro_sem_mudar_o_primeiro(api, db, pr
     assert new_row == existing_row, f"o veterinário novo {body['id']} deveria ser {existing_row}, é {new_row}"
     row_after = db.execute(SELECT_VET_BY_ID, (prepared_vet,)).fetchone()
     assert row_after == existing_row, f"o veterinário existente {prepared_vet} deveria continuar {existing_row}, é {row_after}"
+
+
+def test_criar_veterinario_com_especialidade_repetida_grava_uma_ligacao_so(api, db, prepared_specialty, vets_to_delete):
+    """CT-API-VETS-05: criar um veterinário com a mesma especialidade duas vezes na lista responde 201 e grava
+    uma ligação só com ela, porque a lista funciona como um conjunto.
+
+    O banco recusaria a ligação repetida (regra UNIQUE em `vet_specialties`); o risco coberto é um 500 ou um
+    veterinário gravado sem a ligação."""
+    # Preparar: a especialidade da fixture aparece duas vezes na lista
+    specialty = {"id": prepared_specialty, "name": PREPARED_SPECIALTY_NAME}
+    payload = {**VET, "specialties": [specialty, dict(specialty)]}
+
+    # Agir
+    response = api.post("/vets", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        vets_to_delete.append(body["id"])
+
+    # Verificar a resposta
+    assert response.status_code == 201, f"POST /vets com especialidade repetida deveria responder 201, respondeu {response.status_code}"
+
+    # Verificar o banco: o veterinário gravado e exatamente uma ligação, com a especialidade repetida
+    row = db.execute(SELECT_VET_BY_ID, (body["id"],)).fetchone()
+    expected = (payload["firstName"], payload["lastName"])
+    assert row == expected, f"a linha do veterinário {body['id']} deveria ser {expected}, é {row}"
+    links = db.execute(SELECT_SPECIALTY_IDS_BY_VET, (body["id"],)).fetchall()
+    assert links == [(prepared_specialty,)], f"o veterinário {body['id']} deveria ter uma ligação só, com {prepared_specialty}; tem {links}"
