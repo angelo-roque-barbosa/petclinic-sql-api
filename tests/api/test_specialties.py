@@ -209,3 +209,31 @@ def test_apagar_especialidade_sem_veterinarios_remove_so_ela(api, db, prepared_s
     )
     links_after = db.execute(COUNT_VET_SPECIALTIES).fetchone()[0]
     assert links_after == links_before, f"o total de ligações veterinário-especialidade deveria continuar {links_before}, ficou {links_after}"
+
+
+def test_criar_especialidade_com_os_caracteres_permitidos_grava_o_nome_igual(api, db, specialties_to_delete):
+    """CT-API-SPECIALTIES-09: um nome de especialidade com todos os caracteres que o `pattern` do contrato
+    permite (letra acentuada, espaço, `&`, `/` e `-`), num tamanho comum, é aceito com 201 e gravado igual,
+    caractere por caractere.
+
+    Separado do CT-API-SPECIALTIES-03, que varia só o tamanho: aqui varia só o conjunto de caracteres."""
+    # Preparar: a guarda garante que o nome tem cada caractere especial, para a cobertura não se perder se
+    # alguém trocar o valor
+    name = "Odontologia Estética & Cirurgia/Buco-maxilar"
+    for char in ("é", " ", "&", "/", "-"):
+        assert char in name, f"o nome do teste deveria conter {char!r}"
+    payload = {"name": name}
+
+    # Agir
+    response = api.post("/specialties", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        specialties_to_delete.append(body["id"])
+
+    # Verificar a resposta
+    assert response.status_code == 201, f"POST /specialties com {name!r} deveria responder 201, respondeu {response.status_code}"
+
+    # Verificar o banco: o nome gravado é o enviado, caractere por caractere
+    row = db.execute(SELECT_SPECIALTY_BY_ID, (body["id"],)).fetchone()
+    expected = (payload["name"],)
+    assert row == expected, f"a especialidade {body['id']} deveria ser {expected}, é {row}"

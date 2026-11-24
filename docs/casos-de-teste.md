@@ -905,12 +905,12 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – validação (partição de equivalência) |
 | **Prioridade** | Baixa |
 | **Objetivo** | Garantir que os caracteres permitidos pelo contrato são aceitos e gravados sem alteração. |
-| **Pré-condições** | Nenhuma. |
+| **Pré-condições** | Nenhuma. No pytest, a especialidade criada é apagada no fim pela fixture `specialties_to_delete` (tests/conftest.py). |
 | **Dados de teste** | name = `Odontologia Estética & Cirurgia/Buco-maxilar` (44 caracteres): letra acentuada, espaço, `&`, `/` e `-`, todos permitidos pelo `pattern` `^[\p{L}][\p{L}\s\-&/]{0,79}$`. |
 | **Passos** | 1. Enviar POST /api/specialties.<br>2. Verificar a resposta.<br>3. Buscar no banco a linha de `specialties` com o id devolvido. |
 | **Resultado esperado** | Passo 2: status 201 e name igual ao enviado.<br>Passo 3: name igual ao enviado, caractere por caractere. |
 | **Status** | Não executado |
-| **Observações** | Separado do CT-API-SPECIALTIES-03 de propósito: o 03 varia só o tamanho, este varia só os caracteres, com um tamanho comum, para que uma falha aponte a causa sem ambiguidade. Caracteres fora do `pattern` (dígito, `.`, `_`) são outra partição, ainda sem caso. Em 2026-11-22, numa sondagem, o valor foi aceito com 201 e gravado igual. Na coleção do Postman: `CT-API-SPECIALTIES-09`, que também confere que o nome enviado tem cada caractere especial (acento, espaço, `&`, `/` e `-`), para o teste não perder a cobertura se alguém trocar o valor. Com um dígito no nome, a resposta foi 400, como o `pattern` manda. |
+| **Observações** | Separado do CT-API-SPECIALTIES-03 de propósito: o 03 varia só o tamanho, este varia só os caracteres, com um tamanho comum, para que uma falha aponte a causa sem ambiguidade. Caracteres fora do `pattern` (dígito, `.`, `_`) são outra partição, ainda sem caso. Em 2026-11-22, numa sondagem, o valor foi aceito com 201 e gravado igual. Na coleção do Postman: `CT-API-SPECIALTIES-09`, que também confere que o nome enviado tem cada caractere especial (acento, espaço, `&`, `/` e `-`), para o teste não perder a cobertura se alguém trocar o valor; o pytest tem a mesma guarda. Com um dígito no nome, a resposta foi 400, como o `pattern` manda. |
 
 ### tests/api/test_vets.py
 

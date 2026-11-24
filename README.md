@@ -175,6 +175,7 @@ execução; quando difere do esperado, a linha aponta o bug.
 | `name` (POST de especialidade) | só espaços (o banco aceita) | `'   '` | 400, nada gravado | 400, nada gravado |
 | `name` (POST de especialidade) | no limite (no banco, `text` sem limite) | 80 caracteres, também com `&`, `/` e acentos (85 bytes) | 201, gravado inteiro | 201, gravado inteiro |
 | `name` (POST de especialidade) | acima do limite | 81 caracteres | 400, nada gravado | 400, nada gravado |
+| `name` (POST de especialidade) | caracteres permitidos pelo `pattern` (acento, espaço, `&`, `/`, `-`) | `Odontologia Estética & Cirurgia/Buco-maxilar` | 201, gravado igual | 201, gravado igual |
 
 ## Achados
 
