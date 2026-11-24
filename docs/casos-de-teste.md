@@ -1101,11 +1101,11 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – positivo |
 | **Prioridade** | Alta |
 | **Objetivo** | Garantir que o usuário é gravado com a senha em hash, ativo, e com os papéis enviados. |
-| **Dados de teste** | Usuário padrão: username único com até 20 caracteres, senha, papel `ROLE_OWNER_ADMIN`. |
+| **Dados de teste** | Usuário padrão: username que não existe no seed, com até 20 caracteres (`qaclara` no pytest), senha, papel `ROLE_OWNER_ADMIN`. O usuário criado é apagado no fim, direto no banco (fixture `users_to_delete` no pytest). |
 | **Passos** | 1. Enviar POST /api/users.<br>2. Verificar a resposta.<br>3. Buscar no banco a linha de `users` e as linhas de `roles` desse username. |
 | **Resultado esperado** | Passo 2: status 2xx de criação.<br>Passo 3: password diferente da senha enviada, no formato bcrypt (começa com `$2a$` ou `$2b$` e tem 60 caracteres); enabled = true; uma linha em `roles` com `ROLE_OWNER_ADMIN`. |
 | **Status** | Não executado |
-| **Observações** | Dicionário: o banco aceita senha em texto puro; o hash é responsabilidade da API.<br>Em 2026-11-24, a API respondeu 201, gravou o usuário ativo e com o papel, mas guardou a senha em texto puro (igual à enviada) e a devolveu na resposta: é o BUG-18 (CT-BUG-18-01). |
+| **Observações** | Dicionário: o banco aceita senha em texto puro; o hash é responsabilidade da API.<br>Em 2026-11-24, a API respondeu 201, gravou o usuário ativo e com o papel, mas guardou a senha em texto puro (igual à enviada) e a devolveu na resposta: é o BUG-18 (CT-BUG-18-01). No pytest, o teste principal confere o 201, o `enabled` e o papel; o hash fica no CT-BUG-18-01, para a suíte continuar sem falhas conhecidas. |
 
 #### CT-API-USERS-02 — Criar usuário sem username ou com username vazio
 
