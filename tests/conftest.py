@@ -202,6 +202,11 @@ DELETE_PET_TYPE = """
 DELETE FROM types WHERE id = %s;
 """
 
+# Pergunta: como apagar a especialidade com um id? Recebe o id (%s).
+DELETE_SPECIALTY = """
+DELETE FROM specialties WHERE id = %s;
+"""
+
 # Pergunta: como gravar uma visita nova de um pet e receber o id gerado?
 # Recebe, nesta ordem, pet_id, visit_date e description (três %s)
 # e devolve uma linha com um valor só: o id criado.
@@ -268,6 +273,16 @@ def pet_types_to_delete(db):
     yield ids
     for type_id in ids:
         db.execute(DELETE_PET_TYPE, (type_id,))
+
+
+@pytest.fixture
+def specialties_to_delete(db):
+    """Lista de ids de especialidades criadas pela API no teste. No fim, cada uma é apagada por SQL; apagar
+    zero linhas também serve, porque a especialidade pode já ter sido removida."""
+    ids = []
+    yield ids
+    for specialty_id in ids:
+        db.execute(DELETE_SPECIALTY, (specialty_id,))
 
 
 @pytest.fixture
