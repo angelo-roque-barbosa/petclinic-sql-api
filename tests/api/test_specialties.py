@@ -2,6 +2,8 @@
 
 import pytest
 
+from conftest import SECOND_SPECIALTY_NAME
+
 # Especialidade padrão: o contrato só aceita letras, espaço, `-`, `&` e `/` no nome, então não há sufixo
 # numérico. "dermatologia" não existe no populateDB.sql, e cada teste apaga a especialidade que criou.
 SPECIALTY = {"name": "dermatologia"}
@@ -135,4 +137,35 @@ def test_criar_especialidade_com_nome_de_81_caracteres_e_recusada_sem_gravar(api
     specialties_after = db.execute(COUNT_SPECIALTIES).fetchone()[0]
     assert specialties_after == specialties_before, (
         f"o total de especialidades deveria continuar {specialties_before}, ficou {specialties_after}"
+    )
+
+
+def test_atualizar_especialidade_grava_o_novo_nome_na_mesma_linha(api, db, prepared_specialty, second_specialty):
+    """CT-API-SPECIALTIES-06: atualizar o nome de uma especialidade responde 204 e grava o nome novo na mesma
+    linha, sem criar outra especialidade. A especialidade da fixture second_specialty é o controle e continua
+    com o nome dela.
+
+    Ao contrário do PUT de tipo, o contrato não exige o id no corpo (`readOnly` em `Specialty`)."""
+    # Preparar: o corpo leva só o nome novo; os totais antes
+    specialty_id = prepared_specialty
+    payload = dict(SPECIALTY)
+    specialties_before = db.execute(COUNT_SPECIALTIES).fetchone()[0]
+
+    # Agir
+    response = api.put(f"/specialties/{specialty_id}", json=payload)
+
+    # Verificar a resposta
+    assert response.status_code == 204, f"PUT /specialties/{specialty_id} deveria responder 204, respondeu {response.status_code}"
+
+    # Verificar o banco: a mesma linha com o nome novo, nenhuma especialidade a mais e o controle sem mudança
+    row = db.execute(SELECT_SPECIALTY_BY_ID, (specialty_id,)).fetchone()
+    expected = (payload["name"],)
+    assert row == expected, f"a especialidade {specialty_id} deveria se chamar {expected}, é {row}"
+    specialties_after = db.execute(COUNT_SPECIALTIES).fetchone()[0]
+    assert specialties_after == specialties_before, (
+        f"o total de especialidades deveria continuar {specialties_before}, ficou {specialties_after}"
+    )
+    control = db.execute(SELECT_SPECIALTY_BY_ID, (second_specialty,)).fetchone()
+    assert control == (SECOND_SPECIALTY_NAME,), (
+        f"a especialidade de controle {second_specialty} deveria continuar ({SECOND_SPECIALTY_NAME!r},), é {control}"
     )
