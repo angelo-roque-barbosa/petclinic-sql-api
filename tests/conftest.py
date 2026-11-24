@@ -150,6 +150,8 @@ SELECT pet_id FROM visits WHERE id = %s;
 # então a limpeza não mexe em dado do populateDB.sql.
 PREPARED_PET_TYPE_NAME = "chinchila"
 SECOND_PET_TYPE_NAME = "furão"
+PREPARED_SPECIALTY_NAME = "cardiologia"
+SECOND_SPECIALTY_NAME = "oncologia"
 PREPARED_OWNER = {
     "first_name": "Rafael",
     "last_name": "Souza",
@@ -200,6 +202,14 @@ DELETE FROM owners WHERE id = %s;
 # Pergunta: como apagar o tipo de pet com um id? Recebe o id (%s).
 DELETE_PET_TYPE = """
 DELETE FROM types WHERE id = %s;
+"""
+
+# Pergunta: como gravar uma especialidade nova e receber o id que o banco gerou para ela?
+# Recebe o nome como parâmetro (%s) e devolve uma linha com um valor só: o id criado.
+INSERT_SPECIALTY = """ 
+INSERT INTO specialties (name)
+VALUES (%s)
+RETURNING id;
 """
 
 # Pergunta: como apagar a especialidade com um id? Recebe o id (%s).
@@ -273,6 +283,24 @@ def pet_types_to_delete(db):
     yield ids
     for type_id in ids:
         db.execute(DELETE_PET_TYPE, (type_id,))
+
+
+@pytest.fixture
+def prepared_specialty(db):
+    """Grava direto no banco uma especialidade, sem veterinários, e entrega o id. No fim, apaga a
+    especialidade; apagar zero linhas também serve, porque ela pode já ter sido removida."""
+    specialty_id = db.execute(INSERT_SPECIALTY, (PREPARED_SPECIALTY_NAME,)).fetchone()[0]
+    yield specialty_id
+    db.execute(DELETE_SPECIALTY, (specialty_id,))
+
+
+@pytest.fixture
+def second_specialty(db):
+    """Grava direto no banco uma segunda especialidade, sem veterinários, e entrega o id. Serve de controle:
+    o teste confere que ela não muda. No fim, apaga a especialidade; apagar zero linhas também serve."""
+    specialty_id = db.execute(INSERT_SPECIALTY, (SECOND_SPECIALTY_NAME,)).fetchone()[0]
+    yield specialty_id
+    db.execute(DELETE_SPECIALTY, (specialty_id,))
 
 
 @pytest.fixture
