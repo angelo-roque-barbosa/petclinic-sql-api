@@ -957,7 +957,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – validação (valor-limite) |
 | **Prioridade** | Média |
 | **Objetivo** | Garantir que o padrão e o limite de 30 letras do contrato valem. |
-| **Dados de teste** | firstName com 30 letras (válido), com 31 letras, com dígitos (`'Ana2'`) e só com espaços. |
+| **Dados de teste** | firstName com 30 letras (válido), com 31 letras, com dígitos (`'Ana2'`) e só com espaços. No pytest, o 30 roda também com letras acentuadas (60 bytes), para pegar um limite contado em bytes. |
 | **Passos** | 1. Para cada nome, enviar POST /api/vets.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | 30 letras: status 2xx e nome gravado com 30 caracteres.<br>Demais: status 400 e nenhum vet novo. |
 | **Status** | Não executado |

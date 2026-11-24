@@ -105,3 +105,66 @@ def test_criar_veterinario_sem_nome_ou_sobrenome_e_recusado_sem_gravar(api, db, 
     # Verificar o banco: o total de veterinários não muda
     vets_after = db.execute(COUNT_VETS).fetchone()[0]
     assert vets_after == vets_before, f"o total de veterinários deveria continuar {vets_before}, ficou {vets_after}"
+
+
+@pytest.mark.parametrize(
+    "first_name",
+    [
+        pytest.param("a" * 30, id="30-letras"),
+        pytest.param("á" * 30, id="30-acentuadas-60-bytes"),
+    ],
+)
+def test_criar_veterinario_com_nome_de_30_letras_grava_inteiro(api, db, vets_to_delete, first_name):
+    """CT-API-VETS-03: um nome de veterinário com 30 letras, o limite do contrato, é aceito e gravado inteiro.
+    O limite conta caracteres, não bytes: 30 letras acentuadas (60 bytes em UTF-8) também passam."""
+    # Preparar
+    assert len(first_name) == 30, f"o nome do teste deveria ter 30 letras, tem {len(first_name)}"
+    payload = {**VET, "firstName": first_name, "specialties": []}
+
+    # Agir
+    response = api.post("/vets", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        vets_to_delete.append(body["id"])
+
+    # Verificar a resposta
+    assert response.status_code == 201, f"POST /vets com nome de 30 letras deveria responder 201, respondeu {response.status_code}"
+
+    # Verificar o banco: o nome gravado é o enviado, sem corte, com o sobrenome enviado
+    row = db.execute(SELECT_VET_BY_ID, (body["id"],)).fetchone()
+    expected = (payload["firstName"], payload["lastName"])
+    assert row == expected, f"o veterinário {body['id']} deveria ser {expected}, é {row}"
+
+
+@pytest.mark.parametrize(
+    "first_name",
+    [
+        pytest.param("a" * 31, id="31-letras"),
+        pytest.param("Ana2", id="com-digito"),
+        pytest.param("   ", id="so-espacos"),
+    ],
+)
+def test_criar_veterinario_com_nome_fora_do_padrao_ou_do_limite_e_recusado_sem_gravar(api, db, vets_to_delete, first_name):
+    """CT-API-VETS-03: um nome de veterinário com 31 letras, com dígito ou só com espaços responde 400
+    apontando o campo `firstName` e não grava veterinário nenhum."""
+    # Preparar
+    payload = {**VET, "firstName": first_name, "specialties": []}
+    vets_before = db.execute(COUNT_VETS).fetchone()[0]
+
+    # Agir
+    response = api.post("/vets", json=payload)
+    body = response.json()
+    if isinstance(body, dict) and "id" in body:
+        vets_to_delete.append(body["id"])
+
+    # Verificar a resposta: 400, e o erro aponta só o campo firstName
+    assert response.status_code == 400, f"POST /vets com firstName {first_name!r} deveria responder 400, respondeu {response.status_code}"
+    errors = body.get("schemaValidationErrors") or []
+    assert errors, "a resposta deveria listar os erros de validação"
+    assert {error["field"] for error in errors} == {"firstName"}, (
+        f"o erro deveria apontar só firstName, apontou {sorted({error['field'] for error in errors})}"
+    )
+
+    # Verificar o banco: o total de veterinários não muda
+    vets_after = db.execute(COUNT_VETS).fetchone()[0]
+    assert vets_after == vets_before, f"o total de veterinários deveria continuar {vets_before}, ficou {vets_after}"

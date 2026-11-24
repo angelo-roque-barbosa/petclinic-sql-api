@@ -178,6 +178,10 @@ execução; quando difere do esperado, a linha aponta o bug.
 | `name` (POST de especialidade) | caracteres permitidos pelo `pattern` (acento, espaço, `&`, `/`, `-`) | `Odontologia Estética & Cirurgia/Buco-maxilar` | 201, gravado igual | 201, gravado igual |
 | `firstName` / `lastName` (POST de veterinário) | ausente (o banco aceita NULL) | sem o campo | 400, nada gravado | 400, nada gravado |
 | `firstName` / `lastName` (POST de veterinário) | vazio | `''` | 400, nada gravado | 400, nada gravado |
+| `firstName` (POST de veterinário) | no limite (no banco, `text` sem limite) | 30 letras, também acentuadas (60 bytes) | 201, gravado inteiro | 201, gravado inteiro |
+| `firstName` (POST de veterinário) | acima do limite | 31 letras | 400, nada gravado | 400, nada gravado |
+| `firstName` (POST de veterinário) | fora do `pattern`: dígito | `'Ana2'` | 400, nada gravado | 400, nada gravado |
+| `firstName` (POST de veterinário) | só espaços (o banco aceita) | `'   '` | 400, nada gravado | 400, nada gravado |
 
 ## Achados
 
