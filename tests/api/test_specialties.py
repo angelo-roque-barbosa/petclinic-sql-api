@@ -169,3 +169,43 @@ def test_atualizar_especialidade_grava_o_novo_nome_na_mesma_linha(api, db, prepa
     assert control == (SECOND_SPECIALTY_NAME,), (
         f"a especialidade de controle {second_specialty} deveria continuar ({SECOND_SPECIALTY_NAME!r},), é {control}"
     )
+
+
+# Pergunta: quantas ligações entre veterinário e especialidade existem hoje?
+# Devolve uma linha só, com um único valor: o total de linhas de `vet_specialties`.
+COUNT_VET_SPECIALTIES = """
+SELECT COUNT(*) FROM vet_specialties;
+"""
+
+
+def test_apagar_especialidade_sem_veterinarios_remove_so_ela(api, db, prepared_specialty, second_specialty):
+    """CT-API-SPECIALTIES-07: apagar uma especialidade sem veterinários responde 204 e remove só essa
+    especialidade. A especialidade da fixture second_specialty é o controle, e o total de ligações entre
+    veterinário e especialidade também é conferido, porque a exclusão não pode mexer nos vínculos dos outros."""
+    # Preparar: as duas especialidades, sem veterinários, vêm das fixtures; aqui só os totais antes
+    specialty_id = prepared_specialty
+    specialties_before = db.execute(COUNT_SPECIALTIES).fetchone()[0]
+    links_before = db.execute(COUNT_VET_SPECIALTIES).fetchone()[0]
+
+    # Agir
+    response = api.delete(f"/specialties/{specialty_id}")
+
+    # Verificar a resposta
+    assert response.status_code == 204, f"DELETE /specialties/{specialty_id} deveria responder 204, respondeu {response.status_code}"
+
+    # Verificar o banco: a especialidade não existe mais e saiu exatamente uma
+    assert db.execute(SELECT_SPECIALTY_BY_ID, (specialty_id,)).fetchone() is None, (
+        f"a especialidade {specialty_id} não deveria mais existir"
+    )
+    specialties_after = db.execute(COUNT_SPECIALTIES).fetchone()[0]
+    assert specialties_after == specialties_before - 1, (
+        f"o total de especialidades deveria cair para {specialties_before - 1}, ficou {specialties_after}"
+    )
+
+    # o controle continua com o nome dele e nenhuma ligação com veterinário sumiu
+    control = db.execute(SELECT_SPECIALTY_BY_ID, (second_specialty,)).fetchone()
+    assert control == (SECOND_SPECIALTY_NAME,), (
+        f"a especialidade de controle {second_specialty} deveria continuar ({SECOND_SPECIALTY_NAME!r},), é {control}"
+    )
+    links_after = db.execute(COUNT_VET_SPECIALTIES).fetchone()[0]
+    assert links_after == links_before, f"o total de ligações veterinário-especialidade deveria continuar {links_before}, ficou {links_after}"

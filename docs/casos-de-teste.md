@@ -875,12 +875,12 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Tipo de teste** | Funcional – efeito no servidor |
 | **Prioridade** | Baixa |
 | **Objetivo** | Garantir que a exclusão remove a especialidade. |
-| **Pré-condições** | Especialidade sem veterinários criada via API. |
+| **Pré-condições** | Duas especialidades sem veterinários gravadas por SQL nas fixtures `prepared_specialty` e `second_specialty` (tests/conftest.py). A segunda é o controle e não pode mudar. |
 | **Dados de teste** | Id da especialidade. |
 | **Passos** | 1. Enviar DELETE /api/specialties/{id}.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | Status 2xx e nenhuma linha de `specialties` com esse id. |
 | **Status** | Não executado |
-| **Observações** | Em 2026-11-22, a API respondeu 204, a especialidade sumiu e um segundo DELETE respondeu 404. Na coleção do Postman: `CT-API-SPECIALTIES-07`, que cria duas especialidades sem veterinários e apaga só uma; a outra é o controle. Também confere que o total de ligações veterinário-especialidade (soma das especialidades de cada veterinário em GET /api/vets) não muda. |
+| **Observações** | Em 2026-11-22, a API respondeu 204, a especialidade sumiu e um segundo DELETE respondeu 404. Na coleção do Postman: `CT-API-SPECIALTIES-07`, que cria duas especialidades sem veterinários e apaga só uma; a outra é o controle. Também confere que o total de ligações veterinário-especialidade (soma das especialidades de cada veterinário em GET /api/vets) não muda; no pytest, essa conferência é a contagem de `vet_specialties` no banco. |
 
 #### CT-API-SPECIALTIES-08 — Apagar especialidade em uso
 
