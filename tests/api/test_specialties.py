@@ -2,7 +2,7 @@
 
 import pytest
 
-from conftest import SECOND_SPECIALTY_NAME
+from conftest import COUNT_VET_SPECIALTIES, SECOND_SPECIALTY_NAME
 
 # Especialidade padrão: o contrato só aceita letras, espaço, `-`, `&` e `/` no nome, então não há sufixo
 # numérico. "dermatologia" não existe no populateDB.sql, e cada teste apaga a especialidade que criou.
@@ -169,13 +169,6 @@ def test_atualizar_especialidade_grava_o_novo_nome_na_mesma_linha(api, db, prepa
     assert control == (SECOND_SPECIALTY_NAME,), (
         f"a especialidade de controle {second_specialty} deveria continuar ({SECOND_SPECIALTY_NAME!r},), é {control}"
     )
-
-
-# Pergunta: quantas ligações entre veterinário e especialidade existem hoje?
-# Devolve uma linha só, com um único valor: o total de linhas de `vet_specialties`.
-COUNT_VET_SPECIALTIES = """
-SELECT COUNT(*) FROM vet_specialties;
-"""
 
 
 def test_apagar_especialidade_sem_veterinarios_remove_so_ela(api, db, prepared_specialty, second_specialty):

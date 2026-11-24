@@ -145,6 +145,12 @@ SELECT_VISIT_PET_ID = """
 SELECT pet_id FROM visits WHERE id = %s;
 """
 
+# Pergunta: quantas ligações entre veterinário e especialidade existem hoje?
+# Devolve uma linha só, com um único valor: o total de linhas de `vet_specialties`.
+COUNT_VET_SPECIALTIES = """
+SELECT COUNT(*) FROM vet_specialties;
+"""
+
 
 # Dados que a fixture owner_with_pet grava direto no banco. São do próprio teste: nenhum vem do seed,
 # então a limpeza não mexe em dado do populateDB.sql.
@@ -152,6 +158,7 @@ PREPARED_PET_TYPE_NAME = "chinchila"
 SECOND_PET_TYPE_NAME = "furão"
 PREPARED_SPECIALTY_NAME = "cardiologia"
 SECOND_SPECIALTY_NAME = "oncologia"
+THIRD_SPECIALTY_NAME = "neurologia"
 PREPARED_OWNER = {
     "first_name": "Rafael",
     "last_name": "Souza",
@@ -224,6 +231,13 @@ INSERT_VET = """
 INSERT INTO vets (first_name, last_name)
 VALUES (%s, %s)
 RETURNING id;
+"""
+
+# Pergunta: como ligar um veterinário a uma especialidade? Recebe, nesta ordem, vet_id e specialty_id (dois %s)
+# e grava uma linha em `vet_specialties`. Não precisa devolver nada, porque a tabela não tem id próprio.
+INSERT_VET_SPECIALTY = """
+INSERT INTO vet_specialties (vet_id, specialty_id)
+VALUES (%s, %s);
 """
 
 # Pergunta: como apagar todas as ligações de um veterinário com especialidades? Recebe o id do veterinário (%s)
@@ -319,6 +333,15 @@ def second_specialty(db):
     """Grava direto no banco uma segunda especialidade, sem veterinários, e entrega o id. Serve de controle:
     o teste confere que ela não muda. No fim, apaga a especialidade; apagar zero linhas também serve."""
     specialty_id = db.execute(INSERT_SPECIALTY, (SECOND_SPECIALTY_NAME,)).fetchone()[0]
+    yield specialty_id
+    db.execute(DELETE_SPECIALTY, (specialty_id,))
+
+
+@pytest.fixture
+def third_specialty(db):
+    """Grava direto no banco uma terceira especialidade, sem veterinários, e entrega o id. No fim, apaga a
+    especialidade; apagar zero linhas também serve."""
+    specialty_id = db.execute(INSERT_SPECIALTY, (THIRD_SPECIALTY_NAME,)).fetchone()[0]
     yield specialty_id
     db.execute(DELETE_SPECIALTY, (specialty_id,))
 
