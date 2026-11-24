@@ -29,7 +29,7 @@ em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`)
 | [BUG-17](#bug-17--especialidade-do-veterinário-é-resolvida-pelo-nome-o-id-é-ignorado-e-nome-desconhecido-some-em-silêncio) | Especialidade do veterinário é resolvida pelo nome: o `id` é ignorado e nome desconhecido some em silêncio | médio a alto | [#17](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/17) |
 | [BUG-18](#bug-18--senha-do-usuário-criado-pela-api-é-gravada-em-texto-puro) | Senha do usuário criado pela API é gravada em texto puro e devolvida na resposta | alto | [#18](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/18) |
 | [BUG-19](#bug-19--username-só-com-espaços-é-aceito-e-gravado) | Username só com espaços é aceito e gravado, com papel | baixo a médio | [#19](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/19) |
-| [BUG-20](#bug-20--username-de-21-a-80-caracteres-responde-404-em-vez-de-400) | Username de 21 a 80 caracteres responde 404 em vez de 400: o contrato aceita 80, o banco só 20 | baixo a médio | [#20](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/20) |
+| [BUG-20](#bug-20--usuário-que-o-contrato-aceita-e-o-banco-recusa-responde-404-em-vez-de-400) | Usuário que o contrato aceita e o banco recusa responde 404 em vez de 400: username de 21 a 80 caracteres e usuário sem senha | baixo a médio | [#20](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/20) |
 
 ## BUG-01 · API responde 500 em vez de 400 quando o id do dono não é numérico
 
@@ -615,32 +615,38 @@ em 2026-11-15 na `4.0.2` republicada em 2026-11-14 (digest `sha256:daba846d…`)
 - **Impacto:** baixo a médio. O `username` é a chave primária de `users`: um login em branco ocupa esse valor, não
   identifica ninguém em logs ou telas e recebe papéis, inclusive de administração.
 
-## BUG-20 · Username de 21 a 80 caracteres responde 404 em vez de 400
+## BUG-20 · Usuário que o contrato aceita e o banco recusa responde 404 em vez de 400
 
 - **Issue:** [#20](https://github.com/angelo-roque-barbosa/petclinic-sql-api/issues/20)
 - **Passos:** `docker compose down -v` → `up -d --wait` → contar as linhas de `users` e `roles` → enviar
   `POST /api/users` com o usuário padrão (`password`, `enabled`, papel `ROLE_OWNER_ADMIN`) e username com 20, 21, 80
-  e 81 caracteres → conferir a resposta, o banco e o log da API.
-- **Esperado:** `400` apontando o campo `username` para 21 caracteres ou mais, sem gravar nada, e o contrato com o
-  mesmo limite do banco (20).
-- **Obtido:** o contrato aceita até 80 caracteres (`User.username`: `maxLength: 80`), mas a coluna é `varchar(20)`.
+  e 81 caracteres → enviar o usuário padrão sem `password`, com `password: null` e com `password: ""` → conferir a
+  resposta, o banco e o log da API.
+- **Esperado:** `400` apontando o campo do problema (`username` para 21 caracteres ou mais, `password` quando a senha
+  falta), sem gravar nada, e o contrato com as mesmas regras do banco (username até 20, senha obrigatória).
+- **Obtido:** o contrato é mais frouxo que o banco em dois campos: aceita username com até 80 caracteres
+  (`User.username`: `maxLength: 80`), mas a coluna é `varchar(20)`; e não exige `password`, mas a coluna é
+  `NOT NULL`. Nos dois casos a validação deixa passar e a API responde `404`.
 
-  | Username | Resposta | No banco |
+  | Pedido | Resposta | No banco |
   |:---|:---|:---|
-  | 20 caracteres | `201` | gravado inteiro |
-  | 21 caracteres | `404`, `DataIntegrityViolationException` | nada |
-  | 80 caracteres (limite do contrato) | `404`, `DataIntegrityViolationException` | nada |
-  | 81 caracteres | `400` (`username`) | nada |
+  | username com 20 caracteres | `201` | gravado inteiro |
+  | username com 21 caracteres | `404`, `DataIntegrityViolationException` | nada |
+  | username com 80 caracteres (limite do contrato) | `404`, `DataIntegrityViolationException` | nada |
+  | username com 81 caracteres | `400` (`username`) | nada |
+  | sem `password` | `404`, `DataIntegrityViolationException` | nada |
+  | `password: null` | `404`, `DataIntegrityViolationException` | nada |
+  | `password: ""` | `400` (`password`) | nada |
 
 - **Evidência no banco:** contagens de `users` e `roles`: 1 e 3 antes; só o usuário de 20 caracteres a mais depois
-  dos quatro pedidos (2 e 4); 1 e 3 depois da limpeza (direto no banco, porque a API não tem DELETE de usuário). O log
-  da API mostra `ERROR: value too long for type character varying(20)` no `insert into users`. Reproduzido do zero
-  em 2026-11-24, na imagem `4.0.2` (digest `sha256:daba846d…`).
-- **Causa provável:** o contrato não acompanha o banco, então de 21 a 80 caracteres a validação deixa passar e quem
-  recusa é o banco; a API responde `404` para qualquer `DataIntegrityViolationException`, a mesma tradução do BUG-03
-  e do BUG-16.
+  dos pedidos (2 e 4); 1 e 3 depois da limpeza (direto no banco, porque a API não tem DELETE de usuário). O log da API
+  mostra `ERROR: value too long for type character varying(20)` e `ERROR: null value in column "password" of
+  relation "users" violates not-null constraint` no `insert into users`. Username reproduzido do zero em 2026-11-24;
+  senha ausente acrescentada no mesmo dia, também reproduzida do zero, na imagem `4.0.2` (digest `sha256:daba846d…`).
+- **Causa provável:** o contrato não acompanha o banco, então o que só o banco proíbe chega até ele; a API responde
+  `404` para qualquer `DataIntegrityViolationException`, a mesma tradução do BUG-03 e do BUG-16.
 - **Impacto:** baixo a médio. Nada é gravado errado, mas quem segue o contrato recebe um `404` sem sentido para um
-  nome de 21 a 80 caracteres, com o nome da exceção Java no corpo.
+  username de 21 a 80 caracteres ou para um usuário sem senha, com o nome da exceção Java no corpo.
 
 ## Observações
 

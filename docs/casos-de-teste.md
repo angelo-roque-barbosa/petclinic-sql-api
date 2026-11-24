@@ -42,9 +42,9 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | Bugs conhecidos | [tests/api/known_bugs/test_specialty_name.py](#testsapiknown_bugstest_specialty_namepy) | 1 |
 | Bugs conhecidos | [tests/api/known_bugs/test_specialty_delete.py](#testsapiknown_bugstest_specialty_deletepy) | 1 |
 | Bugs conhecidos | [tests/api/known_bugs/test_vet_specialties.py](#testsapiknown_bugstest_vet_specialtiespy) | 1 |
-| Bugs conhecidos | [tests/api/known_bugs/test_user_password.py](#testsapiknown_bugstest_user_passwordpy) | 1 |
+| Bugs conhecidos | [tests/api/known_bugs/test_user_password.py](#testsapiknown_bugstest_user_passwordpy) | 2 |
 | Bugs conhecidos | [tests/api/known_bugs/test_user_username.py](#testsapiknown_bugstest_user_usernamepy) | 2 |
-| **Total** | | **99** |
+| **Total** | | **100** |
 
 ## API
 
@@ -1148,7 +1148,7 @@ Casos de teste derivados do [dicionário de dados](dicionario-de-dados.md), um p
 | **Passos** | 1. Para cada variação, enviar POST /api/users.<br>2. Verificar a resposta e o banco. |
 | **Resultado esperado** | Status 400 e nenhum usuário novo. |
 | **Status** | Não executado |
-| **Observações** | O contrato não exige password, mas o banco tem NOT NULL. Senha `''` viraria um hash válido de senha vazia. |
+| **Observações** | O contrato não exige password, mas o banco tem NOT NULL. Senha `''` viraria um hash válido de senha vazia.<br>Em 2026-11-24, `''` respondeu 400 apontando `password`, sem gravar nada; sem o campo (e com `null`) a resposta foi 404 com `DataIntegrityViolationException`, também sem gravar: quem recusa é o banco. Isso ampliou o BUG-20 (CT-BUG-20-02). |
 
 #### CT-API-USERS-05 — Criar usuário com username já cadastrado
 
@@ -1599,6 +1599,23 @@ A coleção cobre donos, pets, visitas, tipos de pet, especialidades e veteriná
 | **Resultado obtido** | Passo 2: status 201, com a senha em texto puro no corpo. Passo 3: password igual à senha enviada (BUGS.md). |
 | **Status** | Não executado |
 | **Observações** | Reproduzido do zero em 2026-11-24. O `admin` do seed tem a senha em bcrypt, o que mostra o formato esperado. Teardown direto no banco, porque a API não tem DELETE de usuário: papéis, depois o usuário; cada remoção aceita "já removido". |
+
+#### CT-BUG-20-02 — [BUG-20] Usuário sem senha é recusado com 400
+
+| Campo | Descrição |
+|---|---|
+| **Módulo / Área** | Bugs conhecidos › API › Usuários › Criação |
+| **Tipo de teste** | Funcional – negativo (validação) |
+| **Prioridade** | Média |
+| **Bug relacionado** | BUG-20 |
+| **Objetivo** | Garantir que um usuário sem senha é recusado pela validação da API, com 400, e não pelo banco. |
+| **Pré-condições** | Nenhuma. |
+| **Dados de teste** | Usuário padrão sem `password` e com `password: null`. |
+| **Passos** | 1. Contar as linhas de `users`.<br>2. Para cada corpo, enviar POST /api/users.<br>3. Verificar cada resposta.<br>4. Contar de novo. |
+| **Resultado esperado** | Passo 3: status 400 apontando `password`, sem nome de exceção Java no corpo.<br>Passo 4: mesma contagem. |
+| **Resultado obtido** | Passo 3: status 404 com `DataIntegrityViolationException`. Passo 4: mesma contagem (BUGS.md). |
+| **Status** | Não executado |
+| **Observações** | Reproduzido do zero em 2026-11-24. Um caso parametrizado por corpo (`pytest.mark.parametrize`). A parte do passo 4 passa hoje; o que falha é o status. Teardown direto no banco, aceitando "já removido". |
 
 ### tests/api/known_bugs/test_user_username.py
 
